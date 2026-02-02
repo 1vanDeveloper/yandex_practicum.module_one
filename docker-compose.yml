@@ -13,6 +13,7 @@ services:
       - "5432:5432"
     volumes:
       - ./scripts/schema.sql:/docker-entrypoint-initdb.d/1-init.sql:ro
+      - ./scripts/data.sql:/docker-entrypoint-initdb.d/2-data.sql:ro
 
 volumes:
   cache:
