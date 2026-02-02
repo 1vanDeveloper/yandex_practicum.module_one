@@ -18,7 +18,9 @@ repositories {
 }
 
 dependencies {
-    implementation("org.springframework:spring-webmvc:6.2.1")
+    implementation("org.springframework:spring-webmvc:6.2.10")
+    implementation("org.springframework.data:spring-data-jdbc:3.4.1")
+    implementation("org.postgresql:postgresql:42.7.3")
     compileOnly("jakarta.servlet:jakarta.servlet-api:6.1.0")
 
     testImplementation(platform("org.junit:junit-bom:5.10.0"))
