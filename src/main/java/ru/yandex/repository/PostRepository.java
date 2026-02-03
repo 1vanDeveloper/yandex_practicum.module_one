@@ -1,7 +1,6 @@
 package ru.yandex.repository;
 
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.stereotype.Repository;
 import ru.yandex.model.Post;
 
 import java.util.Arrays;
@@ -19,7 +18,6 @@ public interface PostRepository {
     );
 }
 
-@Repository
 class JdbcNativePostRepository implements PostRepository {
 
     private final JdbcTemplate jdbcTemplate;
@@ -36,18 +34,17 @@ class JdbcNativePostRepository implements PostRepository {
         var tags = valuableWords.stream().filter(s -> s.startsWith("#")).toList();
         var title = valuableWords.stream().filter(s -> !s.startsWith("#")).collect(Collectors.joining(" "));
 
-        var baseSql = "select p.id, p.title, p.text, p.likes_count, count(c.post_id) as comment_count, STRING_AGG(t.name, ', ') AS tags_list " +
+        var baseSql = "select r.id, r.title, r.text, r.likes_count, r.tags_list, count(distinct c.id) as comment_count from (select p.id, p.title, p.text, p.likes_count, string_agg(distinct t.name, '||') as tags_list " +
                 "from posts p " +
-                "join comments c on c.post_id = p.id " +
                 "join posts_tags pt on p.id = pt.post_id " +
-                "join tag t on t.id = pt.tag_id";
+                "join tags t on t.id = pt.tag_id";
         if ((long) tags.size() > 0 || !title.isEmpty())
         {
             baseSql += " where ";
         }
         if (!title.isEmpty())
         {
-            baseSql += "p.title like '%" + title + "%'";
+            baseSql += "p.title like '%" + title + "%' ";
             if ((long) tags.size() > 0)
             {
                 baseSql += " and ";
@@ -63,6 +60,10 @@ class JdbcNativePostRepository implements PostRepository {
             baseSql += " having count(distinct t.name) = " + tags.size();
         }
 
+        baseSql += " offset " + (pageNumber - 1) * pageSize + " limit " + pageSize + ") r " +
+                "join comments c on c.post_id = r.id " +
+                "group by r.id, r.title, r.text, r.likes_count, r.tags_list";
+
         return jdbcTemplate.query(
                 baseSql,
                 (rs, rowNum) -> {
@@ -74,7 +75,7 @@ class JdbcNativePostRepository implements PostRepository {
                             rs.getInt("likes_count"),
                             rs.getInt("comment_count")
                     );
-                    post.setTags(Arrays.stream(rs.getString("tags_list").split(", ")).toList());
+                    post.setTags(Arrays.stream(rs.getString("tags_list").split("\\|\\|")).toList());
                     return post;
                 });
     }

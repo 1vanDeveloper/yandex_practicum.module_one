@@ -17,12 +17,12 @@ VALUES
 
 INSERT INTO tags (name)
 VALUES
-    ('Tag for 1'),
-    ('Tag for 2'),
-    ('Tag for 3'),
-    ('Tag for 4'),
-    ('Tag for 1, 3'),
-    ('Tag for all');
+    ('Tag-for-1'),
+    ('Tag-for-2'),
+    ('Tag-for-3'),
+    ('Tag-for-4'),
+    ('Tag-for-1-3'),
+    ('Tag-for-all');
 
 INSERT INTO posts_tags (post_id, tag_id)
 VALUES

@@ -7,6 +7,6 @@ import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 
 @Configuration
 @EnableWebMvc
-@ComponentScan(basePackages = "ru.yandex")
+@ComponentScan(basePackages = {"org.springdoc", "ru.yandex"})
 @PropertySource("classpath:application.properties")
-public class WebConfiguration {}
+public class WebConfiguration { }

@@ -3,5 +3,6 @@
   <component name="DataSourcePerFileMappings">
     <file url="file://$PROJECT_DIR$/scripts/data.sql" value="8d86e9a7-e0ba-48ad-8614-29250a6ed9f4" />
     <file url="file://$PROJECT_DIR$/src/main/java/ru/yandex/repository/PostRepository.java" value="8d86e9a7-e0ba-48ad-8614-29250a6ed9f4" />
+    <file url="file://$APPLICATION_CONFIG_DIR$/consoles/db/8d86e9a7-e0ba-48ad-8614-29250a6ed9f4/console.sql" value="8d86e9a7-e0ba-48ad-8614-29250a6ed9f4" />
   </component>
 </project>
