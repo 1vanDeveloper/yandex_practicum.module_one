@@ -29,7 +29,9 @@ dependencies {
     compileOnly("jakarta.servlet:jakarta.servlet-api:6.1.0")
 
     testImplementation(platform("org.junit:junit-bom:5.10.0"))
+    testImplementation("jakarta.servlet:jakarta.servlet-api:6.1.0")
     testImplementation("org.junit.jupiter:junit-jupiter")
+    testImplementation("org.springframework:spring-test:6.2.15")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 

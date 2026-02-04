@@ -1,6 +1,7 @@
 package ru.yandex.repository;
 
 import org.postgresql.ds.PGSimpleDataSource;
+import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -41,7 +42,7 @@ public class RepositoryConfiguration {
      * Репозиторий управления постами
      */
     @Bean
-    public PostRepository postRepository(JdbcTemplate jdbcTemplate) {
-        return new JdbcNativePostRepository(jdbcTemplate);
+    public PostRepository postRepository(JdbcTemplate jdbcTemplate, Logger logger) {
+        return new JdbcNativePostRepository(jdbcTemplate, logger);
     }
 }

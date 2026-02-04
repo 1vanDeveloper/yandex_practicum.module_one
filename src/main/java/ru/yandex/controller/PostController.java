@@ -6,12 +6,15 @@ import ru.yandex.controller.dto.GetPostResponse;
 import ru.yandex.controller.dto.GetPostsResponse;
 import ru.yandex.repository.PostRepository;
 
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
+
 /**
  * Контреллер по управлению постами
  */
 @RestController
 @RequestMapping("/api/")
-class PostController {
+public class PostController {
 
     private final PostRepository postRepository;
 
@@ -33,6 +36,7 @@ class PostController {
             @RequestParam(name = "pageNumber") int pageNumber,
             @RequestParam(name = "pageSize") int pageSize
     ) {
+        search = URLDecoder.decode(search, StandardCharsets.UTF_8);
         var posts = postRepository.getPosts(search, pageNumber, pageSize);
         return new GetPostsResponse(posts.stream().map(p ->
                 new GetPostResponse(
