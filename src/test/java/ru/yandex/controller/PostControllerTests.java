@@ -109,7 +109,7 @@ public class PostControllerTests {
     public void testGetPost_byId_postExists() throws Exception {
 
         // act
-        var result = mockMvc.perform(get("/api/post/3"))
+        var result = mockMvc.perform(get("/api/posts/3"))
                 .andExpect(status().isOk())
                 .andReturn();
 
@@ -134,7 +134,7 @@ public class PostControllerTests {
     public void testGetPost_byId_postNotExists() throws Exception {
 
         // act
-        var result = mockMvc.perform(get("/api/post/0"))
+        var result = mockMvc.perform(get("/api/posts/0"))
                 .andExpect(status().isOk())
                 .andReturn();
 

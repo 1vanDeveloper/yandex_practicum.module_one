@@ -56,7 +56,7 @@ public class PostController {
      * @param id идентификатор поста
      * @return пост
      */
-    @GetMapping("post/{id}")
+    @GetMapping("posts/{id}")
     @ResponseBody
     public GetPostResponse getPost(
             @PathVariable(name = "id") int id
