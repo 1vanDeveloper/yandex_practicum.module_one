@@ -14,8 +14,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import ru.yandex.WebConfiguration;
 import ru.yandex.controller.dto.GetPostsResponse;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -57,10 +56,13 @@ public class PostControllerTests {
         assertEquals(2, postsResponse.posts().size());
         assertEquals(1, postsResponse.posts().getFirst().id());
         assertEquals(3, postsResponse.posts().getLast().id());
+        assertFalse(postsResponse.hasPrev());
+        assertFalse(postsResponse.hasNext());
+        assertEquals(1, postsResponse.lastPage());
     }
 
     @Test
-    public void testGetSearch_byTitle() throws Exception {
+    public void testGetSearch_byTitle_getSecondPost() throws Exception {
 
         // act
         var result = mockMvc.perform(get("/api/posts?search=seco&pageNumber=1&pageSize=12"))
@@ -75,5 +77,30 @@ public class PostControllerTests {
         assertNotNull(postsResponse);
         assertEquals(1, postsResponse.posts().size());
         assertEquals(2, postsResponse.posts().getFirst().id());
+        assertFalse(postsResponse.hasPrev());
+        assertFalse(postsResponse.hasNext());
+        assertEquals(1, postsResponse.lastPage());
+    }
+
+    @Test
+    public void testGetSearch_byTitle_getAllPosts() throws Exception {
+
+        // act
+        var result = mockMvc.perform(get("/api/posts?search=T&pageNumber=2&pageSize=2"))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        // assert
+        var response = result.getResponse();
+        var json = response.getContentAsByteArray();
+        var postsResponse = objectMapper.readValue(json, GetPostsResponse.class);
+
+        assertNotNull(postsResponse);
+        assertEquals(2, postsResponse.posts().size());
+        assertEquals(3, postsResponse.posts().getFirst().id());
+        assertEquals(4, postsResponse.posts().getLast().id());
+        assertTrue(postsResponse.hasPrev());
+        assertFalse(postsResponse.hasNext());
+        assertEquals(2, postsResponse.lastPage());
     }
 }

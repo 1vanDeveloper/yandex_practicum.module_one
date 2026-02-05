@@ -8,7 +8,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Scope;
 
 @Configuration
-class LoggingConfiguration {
+public class LoggingConfiguration {
 
     @Bean
     @Scope("prototype")

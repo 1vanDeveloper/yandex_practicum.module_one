@@ -1,9 +1,11 @@
 package ru.yandex.repository;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Async;
 import ru.yandex.model.Post;
+import ru.yandex.repository.dto.SearchResult;
 
 import java.util.Arrays;
 import java.util.List;
@@ -15,7 +17,7 @@ import java.util.stream.Collectors;
  */
 public interface PostRepository {
     @Async
-    CompletableFuture<List<Post>> getPosts(
+    CompletableFuture<SearchResult> getPosts(
             String search,
             int pageNumber,
             int pageSize
@@ -33,15 +35,20 @@ class JdbcNativePostRepository implements PostRepository {
     }
 
     @Override
-    public CompletableFuture<List<Post>> getPosts(String search,
+    public CompletableFuture<SearchResult> getPosts(String search,
                                                   int pageNumber,
                                                   int pageSize) {
-        return CompletableFuture.supplyAsync(() -> innerGetPosts(search, pageNumber, pageSize));
+        return CompletableFuture.supplyAsync(() -> innerGetPosts(search, pageNumber, pageSize)).thenApply(r -> {
+            var total = r.isEmpty() ? 0 : r.getFirst().getRight();
+            var totalPages = total / pageSize + ((total % pageSize > 0) ? 1 : 0);
+            var posts = r.stream().map(Pair::getLeft).toList();
+            return new SearchResult(posts, pageNumber > 1, pageNumber < totalPages, totalPages);
+        });
     }
 
-    private List<Post> innerGetPosts(String search,
-                               int pageNumber,
-                               int pageSize) {
+    private List<Pair<Post, Integer>> innerGetPosts(String search,
+                                                      int pageNumber,
+                                                      int pageSize) {
         var valuableWords = Arrays.stream(search.split(" ")).filter(s -> !s.isEmpty() && !s.equals("#")).map(String::strip).toList();
         var tags = valuableWords.stream().filter(s -> s.startsWith("#")).map(s -> s.substring(1)).toList();
         var title = valuableWords.stream().filter(s -> !s.startsWith("#")).collect(Collectors.joining(" "));
@@ -73,8 +80,6 @@ class JdbcNativePostRepository implements PostRepository {
             }
         }
 
-        baseSql += " offset " + (pageNumber - 1) * pageSize + " limit " + pageSize;
-
         baseSql = "select r.id, r.title, r.text, r.likes_count, string_agg(distinct t1.name, '||') as tags_list, count(distinct c.id) as comment_count from " +
                     "(" + baseSql + ") r " +
                     "left join comments c on c.post_id = r.id " +
@@ -83,6 +88,12 @@ class JdbcNativePostRepository implements PostRepository {
                     "group by r.id, r.title, r.text, r.likes_count " +
                     "order by r.id";
 
+        baseSql = "with result as (" + baseSql + "), " +
+                "total AS ( " +
+                "select count(id) as id_count from result " +
+                ") select result.*, total.id_count as total_count from result, total";
+
+        baseSql += " offset " + (pageNumber - 1) * pageSize + " limit " + pageSize;
         logger.debug(baseSql);
 
         return jdbcTemplate.query(
@@ -97,7 +108,7 @@ class JdbcNativePostRepository implements PostRepository {
                             rs.getInt("comment_count")
                     );
                     post.setTags(Arrays.stream(rs.getString("tags_list").split("\\|\\|")).toList());
-                    return post;
+                    return Pair.of(post, rs.getInt("total_count"));
                 });
     }
 
