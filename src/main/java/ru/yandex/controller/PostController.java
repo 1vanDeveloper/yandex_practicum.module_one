@@ -4,10 +4,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import ru.yandex.controller.dto.GetPostResponse;
 import ru.yandex.controller.dto.GetPostsResponse;
+import ru.yandex.model.Post;
 import ru.yandex.repository.PostRepository;
 
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.concurrent.ExecutionException;
 
 /**
  * Контреллер по управлению постами
@@ -37,7 +40,12 @@ public class PostController {
             @RequestParam(name = "pageSize") int pageSize
     ) {
         search = URLDecoder.decode(search, StandardCharsets.UTF_8);
-        var posts = postRepository.getPosts(search, pageNumber, pageSize);
+        List<Post> posts;
+        try {
+            posts = postRepository.getPosts(search, pageNumber, pageSize).get();
+        } catch (InterruptedException | ExecutionException e) {
+            throw new RuntimeException(e);
+        }
         return new GetPostsResponse(posts.stream().map(p ->
                 new GetPostResponse(
                         p.getId(),

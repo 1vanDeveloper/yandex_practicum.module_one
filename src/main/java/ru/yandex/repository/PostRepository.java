@@ -2,17 +2,20 @@ package ru.yandex.repository;
 
 import org.slf4j.Logger;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.scheduling.annotation.Async;
 import ru.yandex.model.Post;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 /**
  * Управление постами
  */
 public interface PostRepository {
-    List<Post> getPosts(
+    @Async
+    CompletableFuture<List<Post>> getPosts(
             String search,
             int pageNumber,
             int pageSize
@@ -30,7 +33,13 @@ class JdbcNativePostRepository implements PostRepository {
     }
 
     @Override
-    public List<Post> getPosts(String search,
+    public CompletableFuture<List<Post>> getPosts(String search,
+                                                  int pageNumber,
+                                                  int pageSize) {
+        return CompletableFuture.supplyAsync(() -> innerGetPosts(search, pageNumber, pageSize));
+    }
+
+    private List<Post> innerGetPosts(String search,
                                int pageNumber,
                                int pageSize) {
         var valuableWords = Arrays.stream(search.split(" ")).filter(s -> !s.isEmpty() && !s.equals("#")).map(String::strip).toList();
