@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import ru.yandex.controller.dto.GetPostResponse;
 import ru.yandex.controller.dto.GetPostsResponse;
+import ru.yandex.model.Post;
 import ru.yandex.repository.PostRepository;
 import ru.yandex.repository.dto.SearchResult;
 
@@ -24,6 +25,7 @@ public class PostController {
     public PostController(PostRepository postRepository) {
         this.postRepository = postRepository;
     }
+
     /**
      * Получение списка постов по строке поиска
      * @param search строка поиска
@@ -45,16 +47,42 @@ public class PostController {
         } catch (InterruptedException | ExecutionException e) {
             throw new RuntimeException(e);
         }
-        var responsePosts = searchResult.posts().stream().map(p ->
-                new GetPostResponse(
-                        p.getId(),
-                        p.getTitle(),
-                        p.getText(),
-                        p.getTags(),
-                        p.getLikesCount(),
-                        p.getCommentsCount()
-                )
-        ).toList();
+        var responsePosts = searchResult.posts().stream().map(PostController::convert).toList();
         return new GetPostsResponse(responsePosts, searchResult.hasPrev(), searchResult.hasNext(), searchResult.lastPage());
+    }
+
+    /**
+     * Получение поста по идентификатору
+     * @param id идентификатор поста
+     * @return пост
+     */
+    @GetMapping("post/{id}")
+    @ResponseBody
+    public GetPostResponse getPost(
+            @PathVariable(name = "id") int id
+    ) {
+        Post post;
+        try {
+            post = postRepository.getPost(id).get();
+        } catch (InterruptedException | ExecutionException e) {
+            throw new RuntimeException(e);
+        }
+
+        return convert(post);
+    }
+
+    private static GetPostResponse convert(Post post) {
+        if (post == null) {
+            return null;
+        }
+
+        return new GetPostResponse(
+                post.getId(),
+                post.getTitle(),
+                post.getText(),
+                post.getTags(),
+                post.getLikesCount(),
+                post.getCommentsCount()
+        );
     }
 }

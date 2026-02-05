@@ -2,11 +2,14 @@ package ru.yandex.repository;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
+import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Async;
 import ru.yandex.model.Post;
 import ru.yandex.repository.dto.SearchResult;
 
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -21,6 +24,11 @@ public interface PostRepository {
             String search,
             int pageNumber,
             int pageSize
+    );
+
+    @Async
+    CompletableFuture<Post> getPost(
+            int id
     );
 }
 
@@ -46,9 +54,14 @@ class JdbcNativePostRepository implements PostRepository {
         });
     }
 
+    @Override
+    public CompletableFuture<Post> getPost(int id) {
+        return CompletableFuture.supplyAsync(() -> innerGetPost(id));
+    }
+
     private List<Pair<Post, Integer>> innerGetPosts(String search,
-                                                      int pageNumber,
-                                                      int pageSize) {
+                                                    int pageNumber,
+                                                    int pageSize) {
         var valuableWords = Arrays.stream(search.split(" ")).filter(s -> !s.isEmpty() && !s.equals("#")).map(String::strip).toList();
         var tags = valuableWords.stream().filter(s -> s.startsWith("#")).map(s -> s.substring(1)).toList();
         var title = valuableWords.stream().filter(s -> !s.startsWith("#")).collect(Collectors.joining(" "));
@@ -80,13 +93,7 @@ class JdbcNativePostRepository implements PostRepository {
             }
         }
 
-        baseSql = "select r.id, r.title, r.text, r.likes_count, string_agg(distinct t1.name, '||') as tags_list, count(distinct c.id) as comment_count from " +
-                    "(" + baseSql + ") r " +
-                    "left join comments c on c.post_id = r.id " +
-                    "left join posts_tags pt1 on r.id = pt1.post_id " +
-                    "join tags t1 on t1.id = pt1.tag_id " +
-                    "group by r.id, r.title, r.text, r.likes_count " +
-                    "order by r.id";
+        baseSql = sqlPostSelect(baseSql);
 
         baseSql = "with result as (" + baseSql + "), " +
                 "total AS ( " +
@@ -98,18 +105,50 @@ class JdbcNativePostRepository implements PostRepository {
 
         return jdbcTemplate.query(
                 baseSql,
-                (rs, rowNum) -> {
-                    var post = new Post
-                    (
-                            rs.getInt("id"),
-                            rs.getString("title"),
-                            rs.getString("text"),
-                            rs.getInt("likes_count"),
-                            rs.getInt("comment_count")
-                    );
-                    post.setTags(Arrays.stream(rs.getString("tags_list").split("\\|\\|")).toList());
-                    return Pair.of(post, rs.getInt("total_count"));
-                });
+                (rs, rowNum) -> Pair.of(map(rs), rs.getInt("total_count")));
     }
 
+    private Post innerGetPost(int id) {
+        var baseSql = "select p.id, p.title, p.text, p.likes_count from posts p where p.id = " + id;
+        baseSql = sqlPostSelect(baseSql);
+
+        return jdbcTemplate.query(baseSql, JdbcNativePostRepository::extractPost);
+    }
+
+    private static Post extractPost(ResultSet rs) throws SQLException, DataAccessException {
+        if (rs.next()) {
+            return map(rs);
+        } else {
+            // Handle case where no rows are returned
+            return null;
+        }
+    }
+
+    private static Post map(ResultSet rs) throws SQLException {
+        var post = new Post (
+                    rs.getInt("id"),
+                    rs.getString("title"),
+                    rs.getString("text"),
+                    rs.getInt("likes_count"),
+                    rs.getInt("comment_count")
+                );
+        post.setTags(Arrays.stream(rs.getString("tags_list").split("\\|\\|")).toList());
+        return post;
+    }
+
+    private static String sqlPostSelect(String setOfPosts) {
+        setOfPosts = setOfPosts.trim();
+        if (setOfPosts.startsWith("select") || setOfPosts.startsWith("SELECT"))
+        {
+            setOfPosts = "(" + setOfPosts + ")";
+        }
+
+        return "select r.id, r.title, r.text, r.likes_count, string_agg(distinct t1.name, '||') as tags_list, count(distinct c.id) as comment_count from " +
+                setOfPosts + " r " +
+                "left join comments c on c.post_id = r.id " +
+                "left join posts_tags pt1 on r.id = pt1.post_id " +
+                "join tags t1 on t1.id = pt1.tag_id " +
+                "group by r.id, r.title, r.text, r.likes_count " +
+                "order by r.id";
+    }
 }

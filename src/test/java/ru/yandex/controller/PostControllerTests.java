@@ -12,6 +12,7 @@ import org.springframework.test.context.web.WebAppConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import ru.yandex.WebConfiguration;
+import ru.yandex.controller.dto.GetPostResponse;
 import ru.yandex.controller.dto.GetPostsResponse;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -102,5 +103,45 @@ public class PostControllerTests {
         assertTrue(postsResponse.hasPrev());
         assertFalse(postsResponse.hasNext());
         assertEquals(2, postsResponse.lastPage());
+    }
+
+    @Test
+    public void testGetPost_byId_postExists() throws Exception {
+
+        // act
+        var result = mockMvc.perform(get("/api/post/3"))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        // assert
+        var response = result.getResponse();
+        var json = response.getContentAsByteArray();
+        var postResponse = objectMapper.readValue(json, GetPostResponse.class);
+
+        assertNotNull(postResponse);
+        assertEquals(3, postResponse.id());
+        assertEquals("Title 3 third", postResponse.title());
+        assertEquals("Text third text text 3", postResponse.text());
+        assertEquals(11, postResponse.likesCount());
+        assertEquals(1, postResponse.commentsCount());
+        assertEquals(3, postResponse.tags().size());
+        assertTrue(postResponse.tags().contains("Tag-for-3"));
+        assertTrue(postResponse.tags().contains("Tag-for-1-3"));
+        assertTrue(postResponse.tags().contains("Tag-for-all"));
+    }
+
+    @Test
+    public void testGetPost_byId_postNotExists() throws Exception {
+
+        // act
+        var result = mockMvc.perform(get("/api/post/0"))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        // assert
+        var response = result.getResponse();
+        var json = response.getContentAsByteArray();
+
+        assertEquals(0, json.length);
     }
 }
