@@ -6,17 +6,23 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.context.web.WebAppConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import ru.yandex.WebConfiguration;
-import ru.yandex.controller.dto.GetPostResponse;
+import ru.yandex.controller.dto.AddPostRequest;
+import ru.yandex.controller.dto.PostResponse;
 import ru.yandex.controller.dto.GetPostsResponse;
+
+import java.util.List;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @ExtendWith(SpringExtension.class)
@@ -116,7 +122,7 @@ public class PostControllerTests {
         // assert
         var response = result.getResponse();
         var json = response.getContentAsByteArray();
-        var postResponse = objectMapper.readValue(json, GetPostResponse.class);
+        var postResponse = objectMapper.readValue(json, PostResponse.class);
 
         assertNotNull(postResponse);
         assertEquals(3, postResponse.id());
@@ -143,5 +149,42 @@ public class PostControllerTests {
         var json = response.getContentAsByteArray();
 
         assertEquals(0, json.length);
+    }
+
+    @Test
+    public void testAddPost() throws Exception {
+        // arrange
+        var commonTag = "Tag-for-all";
+        var shareTag = "Tag-for-3";
+        var newTag = "Tag-for-new-" + UUID.randomUUID();
+        var title = "Заголовок " + UUID.randomUUID();
+        var text = "Текст " + UUID.randomUUID() + " " + UUID.randomUUID();
+        var request = new AddPostRequest(title, text, List.of(commonTag, newTag, shareTag));
+        var requestJson = objectMapper.writeValueAsString(request);
+
+        // act
+        var result = mockMvc
+                .perform(
+                        post("/api/posts")
+                                .contentType(MediaType.APPLICATION_JSON) // Set the content type
+                                .content(requestJson))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        // assert
+        var response = result.getResponse();
+        var json = response.getContentAsByteArray();
+        var postResponse = objectMapper.readValue(json, PostResponse.class);
+
+        assertNotNull(postResponse);
+        assertTrue(postResponse.id() > 4);
+        assertEquals(title, postResponse.title());
+        assertEquals(text, postResponse.text());
+        assertEquals(0, postResponse.likesCount());
+        assertEquals(0, postResponse.commentsCount());
+        assertEquals(3, postResponse.tags().size());
+        assertTrue(postResponse.tags().contains(commonTag));
+        assertTrue(postResponse.tags().contains(shareTag));
+        assertTrue(postResponse.tags().contains(newTag));
     }
 }

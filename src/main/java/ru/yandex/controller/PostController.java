@@ -2,7 +2,8 @@ package ru.yandex.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
-import ru.yandex.controller.dto.GetPostResponse;
+import ru.yandex.controller.dto.AddPostRequest;
+import ru.yandex.controller.dto.PostResponse;
 import ru.yandex.controller.dto.GetPostsResponse;
 import ru.yandex.model.Post;
 import ru.yandex.repository.PostRepository;
@@ -58,7 +59,7 @@ public class PostController {
      */
     @GetMapping("posts/{id}")
     @ResponseBody
-    public GetPostResponse getPost(
+    public PostResponse getPost(
             @PathVariable(name = "id") int id
     ) {
         Post post;
@@ -71,12 +72,28 @@ public class PostController {
         return convert(post);
     }
 
-    private static GetPostResponse convert(Post post) {
+    /**
+     * Добавление поста
+     */
+    @PostMapping("posts")
+    @ResponseBody
+    public PostResponse addPost(@RequestBody AddPostRequest request) {
+        Post post;
+        try {
+            post = postRepository.addPost(request.title(), request.text(), request.tags()).get();
+        } catch (InterruptedException | ExecutionException e) {
+            throw new RuntimeException(e);
+        }
+
+        return convert(post);
+    }
+
+    private static PostResponse convert(Post post) {
         if (post == null) {
             return null;
         }
 
-        return new GetPostResponse(
+        return new PostResponse(
                 post.getId(),
                 post.getTitle(),
                 post.getText(),

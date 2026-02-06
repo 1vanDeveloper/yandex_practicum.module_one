@@ -3,7 +3,9 @@ package ru.yandex.repository;
 import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.springframework.dao.DataAccessException;
-import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 import org.springframework.scheduling.annotation.Async;
 import ru.yandex.model.Post;
 import ru.yandex.repository.dto.SearchResult;
@@ -30,14 +32,21 @@ public interface PostRepository {
     CompletableFuture<Post> getPost(
             int id
     );
+
+    @Async
+    CompletableFuture<Post> addPost(
+            String title,
+            String text,
+            List<String> tags
+    );
 }
 
 class JdbcNativePostRepository implements PostRepository {
 
-    private final JdbcTemplate jdbcTemplate;
+    private final NamedParameterJdbcTemplate jdbcTemplate;
     private final Logger logger;
 
-    public JdbcNativePostRepository(JdbcTemplate jdbcTemplate, Logger logger) {
+    public JdbcNativePostRepository(NamedParameterJdbcTemplate jdbcTemplate, Logger logger) {
         this.jdbcTemplate = jdbcTemplate;
         this.logger = logger;
     }
@@ -59,6 +68,11 @@ class JdbcNativePostRepository implements PostRepository {
         return CompletableFuture.supplyAsync(() -> innerGetPost(id));
     }
 
+    @Override
+    public CompletableFuture<Post> addPost(String title, String text, List<String> tags) {
+        return CompletableFuture.supplyAsync(() -> innerAddPost(title, text, tags));
+    }
+
     private List<Pair<Post, Integer>> innerGetPosts(String search,
                                                     int pageNumber,
                                                     int pageSize) {
@@ -73,13 +87,16 @@ class JdbcNativePostRepository implements PostRepository {
                     "join tags t on t.id = pt.tag_id ";
         }
 
+        var parameters = new MapSqlParameterSource();
+
         if ((long) tags.size() > 0 || !title.isEmpty())
         {
             baseSql += " where ";
 
             if (!title.isEmpty())
             {
-                baseSql += "p.title like '%" + title + "%' ";
+                baseSql += "p.title like :title ";
+                parameters = parameters.addValue("title", "%" + title + "%");
                 if ((long) tags.size() > 0)
                 {
                     baseSql += " and ";
@@ -87,9 +104,12 @@ class JdbcNativePostRepository implements PostRepository {
             }
             if ((long) tags.size() > 0)
             {
-                baseSql += "t.name in ('" + String.join("', '", tags) + "') " +
+                baseSql += "t.name in (:tags) " +
                         "group by p.id, p.title, p.text, p.likes_count " +
-                        "having count(distinct t.name) = " + tags.size();
+                        "having count(distinct t.name) = :tagsSize";
+                parameters = parameters
+                        .addValue("tags", tags)
+                        .addValue("tagsSize", tags.size());
             }
         }
 
@@ -100,19 +120,72 @@ class JdbcNativePostRepository implements PostRepository {
                 "select count(id) as id_count from result " +
                 ") select result.*, total.id_count as total_count from result, total";
 
-        baseSql += " offset " + (pageNumber - 1) * pageSize + " limit " + pageSize;
+        baseSql += " offset :offset limit :limit";
+        parameters = parameters
+                .addValue("offset", (pageNumber - 1) * pageSize)
+                .addValue("limit", pageSize);
         logger.debug(baseSql);
 
         return jdbcTemplate.query(
                 baseSql,
+                parameters,
                 (rs, rowNum) -> Pair.of(map(rs), rs.getInt("total_count")));
     }
 
-    private Post innerGetPost(int id) {
-        var baseSql = "select p.id, p.title, p.text, p.likes_count from posts p where p.id = " + id;
-        baseSql = sqlPostSelect(baseSql);
+    private Post innerAddPost(String title, String text, List<String> tags) {
+        upsertTags(tags);
+        var baseSql = """
+                WITH new_post AS (
+                    insert into posts (title, text, likes_count)
+                    values (:title, :text, 0)
+                    returning id, title, text, likes_count
+                ),
+                ins_tags AS (
+                    insert into posts_tags (post_id, tag_id)
+                    select new_post.id, t.id
+                    from tags t, new_post
+                    where t.name in (:tags)
+                    returning post_id, (select id from tags where id = tag_id) as tag_id
+                )
+                select
+                    p.id,
+                    p.title,
+                    p.text,
+                    p.likes_count,
+                    string_agg(distinct t.name, '||') as tags_list,
+                    0 as comment_count
+                from
+                    new_post p
+                left join ins_tags pt on p.id = pt.post_id
+                join tags t on t.id = pt.tag_id
+                group by p.id, p.title, p.text, p.likes_count
+                order by p.id
+                """;
 
-        return jdbcTemplate.query(baseSql, JdbcNativePostRepository::extractPost);
+        var parameters = new MapSqlParameterSource()
+                .addValue("title", title)
+                .addValue("text", text)
+                .addValue("tags", tags);
+        return jdbcTemplate.query(baseSql, parameters, JdbcNativePostRepository::extractPost);
+    }
+
+    private void upsertTags(List<String> tags) {
+        String sql = "insert into tags (name) " +
+                "values (:name) " +
+                "on conflict (name) do nothing";
+        SqlParameterSource[] batchParams = tags.stream()
+                .map(item -> new MapSqlParameterSource()
+                        .addValue("name", item))
+                .toArray(SqlParameterSource[]::new);
+        jdbcTemplate.batchUpdate(sql, batchParams);
+    }
+
+    private Post innerGetPost(int id) {
+        var baseSql = "select p.id, p.title, p.text, p.likes_count from posts p where p.id = :id";
+        baseSql = sqlPostSelect(baseSql);
+        var parameters = new MapSqlParameterSource().addValue("id", id);
+
+        return jdbcTemplate.query(baseSql, parameters, JdbcNativePostRepository::extractPost);
     }
 
     private static Post extractPost(ResultSet rs) throws SQLException, DataAccessException {

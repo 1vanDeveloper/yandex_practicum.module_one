@@ -5,7 +5,7 @@ import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 import javax.sql.DataSource;
 
@@ -34,15 +34,15 @@ public class RepositoryConfiguration {
      * JdbcTemplate — компонент для выполнения запросов
      */
     @Bean
-    public JdbcTemplate jdbcTemplate(DataSource dataSource) {
-        return new JdbcTemplate(dataSource);
+    public NamedParameterJdbcTemplate jdbcTemplate(DataSource dataSource) {
+        return new NamedParameterJdbcTemplate(dataSource);
     }
 
     /**
      * Репозиторий управления постами
      */
     @Bean
-    public PostRepository postRepository(JdbcTemplate jdbcTemplate, Logger logger) {
+    public PostRepository postRepository(NamedParameterJdbcTemplate jdbcTemplate, Logger logger) {
         return new JdbcNativePostRepository(jdbcTemplate, logger);
     }
 }
