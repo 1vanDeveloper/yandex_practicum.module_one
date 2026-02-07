@@ -113,6 +113,21 @@ public class PostController {
         return convert(post);
     }
 
+    /**
+     * Удаление поста
+     * @param id идентификатор поста
+     */
+    @DeleteMapping("posts/{id}")
+    @ResponseBody
+    public void deletePost(
+            @PathVariable(name = "id") int id) {
+        try {
+            postRepository.deletePost(id).get();
+        } catch (InterruptedException | ExecutionException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     private static PostResponse convert(Post post) {
         if (post == null) {
             return null;

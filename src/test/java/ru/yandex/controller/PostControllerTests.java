@@ -1,6 +1,5 @@
 package ru.yandex.controller;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,6 +17,7 @@ import ru.yandex.controller.dto.AddPostRequest;
 import ru.yandex.controller.dto.EditPostRequest;
 import ru.yandex.controller.dto.PostResponse;
 import ru.yandex.controller.dto.GetPostsResponse;
+import ru.yandex.repository.PostRepository;
 
 import java.util.List;
 import java.util.UUID;
@@ -32,6 +32,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 public class PostControllerTests {
     @Autowired
     private PostController postController;
+    @Autowired
+    private PostRepository postRepository;
 
     private static ObjectMapper objectMapper;
 
@@ -229,6 +231,52 @@ public class PostControllerTests {
         assertTrue(editedResponse.tags().contains(commonTag));
         assertTrue(editedResponse.tags().contains(editTag));
         assertTrue(editedResponse.tags().contains(newTag));
+    }
+
+    @Test
+    public void testDeletePost() throws Exception {
+        // arrange
+        var commonTag = "Tag-for-all";
+        var shareTag = "Tag-for-3";
+        var newTag = "Tag-for-new-" + UUID.randomUUID();
+        var title = "Заголовок " + UUID.randomUUID();
+        var text = "Текст " + UUID.randomUUID() + " " + UUID.randomUUID();
+
+        var editTag = "Tag-for-edit-" + UUID.randomUUID();
+        var editTitle = "Заголовок отредактирован " + UUID.randomUUID();
+        var editText = "Текст отредактирован " + UUID.randomUUID() + " " + UUID.randomUUID();
+
+        // act
+        var postResponse = insertNewPost(title, text, List.of(commonTag, newTag, shareTag));
+        assertNotNull(postResponse);
+
+        var request = new EditPostRequest(postResponse.id(), editTitle, editText, List.of(commonTag, newTag, editTag));
+        var requestJson = objectMapper.writeValueAsString(request);
+        var result = mockMvc
+                .perform(
+                        delete("/api/posts/" + postResponse.id())
+                                .contentType(MediaType.APPLICATION_JSON) // Set the content type
+                                .content(requestJson))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        // assert
+        assertTrue(postResponse.id() > 4);
+        assertEquals(title, postResponse.title());
+        assertEquals(text, postResponse.text());
+        assertEquals(0, postResponse.likesCount());
+        assertEquals(0, postResponse.commentsCount());
+        assertEquals(3, postResponse.tags().size());
+        assertTrue(postResponse.tags().contains(commonTag));
+        assertTrue(postResponse.tags().contains(shareTag));
+        assertTrue(postResponse.tags().contains(newTag));
+
+        var response = result.getResponse();
+        var json = response.getContentAsByteArray();
+        assertEquals(0, json.length);
+
+        var deletedPost = postRepository.getPost(postResponse.id()).get();
+        assertNull(deletedPost);
     }
 
     private PostResponse insertNewPost(String title, String text, List<String> tags) throws Exception {

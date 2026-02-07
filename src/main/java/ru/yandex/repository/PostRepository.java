@@ -47,6 +47,11 @@ public interface PostRepository {
             String text,
             List<String> tags
     );
+
+    @Async
+    CompletableFuture<Void> deletePost(
+            int id
+    );
 }
 
 class JdbcNativePostRepository implements PostRepository {
@@ -84,6 +89,11 @@ class JdbcNativePostRepository implements PostRepository {
     @Override
     public CompletableFuture<Post> editPost(int id, String title, String text, List<String> tags) {
         return CompletableFuture.supplyAsync(() -> innerEditPost(id, title, text, tags));
+    }
+
+    @Override
+    public CompletableFuture<Void> deletePost(int id) {
+        return CompletableFuture.supplyAsync(() -> innerDeletePost(id));
     }
 
     private List<Pair<Post, Integer>> innerGetPosts(String search,
@@ -156,6 +166,27 @@ limit :limit
                 baseSql,
                 parameters,
                 (rs, rowNum) -> Pair.of(map(rs), rs.getInt("total_count")));
+    }
+
+    private Void innerDeletePost(int id) {
+        var baseSql = """
+with deleted_comments as (
+    delete from comments
+    where post_id = :post_id
+    returning id
+),
+deleted_tags as (
+    delete from posts_tags
+    where post_id = :post_id
+    returning tag_id
+)
+delete from posts
+where id = :post_id;
+""";
+        var parameters = new MapSqlParameterSource()
+                .addValue("post_id", id);
+        jdbcTemplate.update(baseSql, parameters);
+        return null;
     }
 
     private Post innerEditPost(int id, String title, String text, List<String> tags) {
