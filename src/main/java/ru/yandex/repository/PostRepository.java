@@ -83,8 +83,10 @@ class JdbcNativePostRepository implements PostRepository {
         var baseSql = "select p.id, p.title, p.text, p.likes_count from posts p ";
         if ((long) tags.size() > 0)
         {
-            baseSql += "left join posts_tags pt on p.id = pt.post_id " +
-                    "join tags t on t.id = pt.tag_id ";
+            baseSql += """
+left join posts_tags pt on p.id = pt.post_id
+join tags t on t.id = pt.tag_id
+""";
         }
 
         var parameters = new MapSqlParameterSource();
@@ -104,23 +106,34 @@ class JdbcNativePostRepository implements PostRepository {
             }
             if ((long) tags.size() > 0)
             {
-                baseSql += "t.name in (:tags) " +
-                        "group by p.id, p.title, p.text, p.likes_count " +
-                        "having count(distinct t.name) = :tagsSize";
+                baseSql += """
+t.name in (:tags)
+group by p.id, p.title, p.text, p.likes_count
+having count(distinct t.name) = :tagsSize
+""";
                 parameters = parameters
                         .addValue("tags", tags)
                         .addValue("tagsSize", tags.size());
             }
         }
 
-        baseSql = sqlPostSelect(baseSql);
-
-        baseSql = "with result as (" + baseSql + "), " +
-                "total AS ( " +
-                "select count(id) as id_count from result " +
-                ") select result.*, total.id_count as total_count from result, total";
-
-        baseSql += " offset :offset limit :limit";
+        baseSql = """
+with result as (
+"""
++ sqlPostSelect(baseSql) +
+"""
+),
+total AS (
+    select count(id) as id_count from result
+)
+select
+    result.*,
+    total.id_count as total_count
+from
+    result, total
+offset :offset
+limit :limit
+""";
         parameters = parameters
                 .addValue("offset", (pageNumber - 1) * pageSize)
                 .addValue("limit", pageSize);
@@ -135,32 +148,32 @@ class JdbcNativePostRepository implements PostRepository {
     private Post innerAddPost(String title, String text, List<String> tags) {
         upsertTags(tags);
         var baseSql = """
-                WITH new_post AS (
-                    insert into posts (title, text, likes_count)
-                    values (:title, :text, 0)
-                    returning id, title, text, likes_count
-                ),
-                ins_tags AS (
-                    insert into posts_tags (post_id, tag_id)
-                    select new_post.id, t.id
-                    from tags t, new_post
-                    where t.name in (:tags)
-                    returning post_id, (select id from tags where id = tag_id) as tag_id
-                )
-                select
-                    p.id,
-                    p.title,
-                    p.text,
-                    p.likes_count,
-                    string_agg(distinct t.name, '||') as tags_list,
-                    0 as comment_count
-                from
-                    new_post p
-                left join ins_tags pt on p.id = pt.post_id
-                join tags t on t.id = pt.tag_id
-                group by p.id, p.title, p.text, p.likes_count
-                order by p.id
-                """;
+WITH new_post AS (
+    insert into posts (title, text, likes_count)
+    values (:title, :text, 0)
+    returning id, title, text, likes_count
+),
+ins_tags AS (
+    insert into posts_tags (post_id, tag_id)
+    select new_post.id, t.id
+    from tags t, new_post
+    where t.name in (:tags)
+    returning post_id, (select id from tags where id = tag_id) as tag_id
+)
+select
+    p.id,
+    p.title,
+    p.text,
+    p.likes_count,
+    string_agg(distinct t.name, '||') as tags_list,
+    0 as comment_count
+from
+    new_post p
+left join ins_tags pt on p.id = pt.post_id
+join tags t on t.id = pt.tag_id
+group by p.id, p.title, p.text, p.likes_count
+order by p.id
+""";
 
         var parameters = new MapSqlParameterSource()
                 .addValue("title", title)
@@ -170,9 +183,11 @@ class JdbcNativePostRepository implements PostRepository {
     }
 
     private void upsertTags(List<String> tags) {
-        String sql = "insert into tags (name) " +
-                "values (:name) " +
-                "on conflict (name) do nothing";
+        var sql = """
+insert into tags (name)
+values (:name)
+on conflict (name) do nothing
+""";
         SqlParameterSource[] batchParams = tags.stream()
                 .map(item -> new MapSqlParameterSource()
                         .addValue("name", item))
@@ -216,12 +231,21 @@ class JdbcNativePostRepository implements PostRepository {
             setOfPosts = "(" + setOfPosts + ")";
         }
 
-        return "select r.id, r.title, r.text, r.likes_count, string_agg(distinct t1.name, '||') as tags_list, count(distinct c.id) as comment_count from " +
-                setOfPosts + " r " +
-                "left join comments c on c.post_id = r.id " +
-                "left join posts_tags pt1 on r.id = pt1.post_id " +
-                "join tags t1 on t1.id = pt1.tag_id " +
-                "group by r.id, r.title, r.text, r.likes_count " +
-                "order by r.id";
+        return """
+select
+    r.id,
+    r.title,
+    r.text,
+    r.likes_count,
+    string_agg(distinct t1.name, '||') as tags_list,
+    count(distinct c.id) as comment_count
+from\s""" + setOfPosts + """
+ r
+left join comments c on c.post_id = r.id
+left join posts_tags pt1 on r.id = pt1.post_id
+join tags t1 on t1.id = pt1.tag_id
+group by r.id, r.title, r.text, r.likes_count
+order by r.id
+""";
     }
 }
