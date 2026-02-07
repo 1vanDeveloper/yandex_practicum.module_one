@@ -39,6 +39,14 @@ public interface PostRepository {
             String text,
             List<String> tags
     );
+
+    @Async
+    CompletableFuture<Post> editPost(
+            int id,
+            String title,
+            String text,
+            List<String> tags
+    );
 }
 
 class JdbcNativePostRepository implements PostRepository {
@@ -71,6 +79,11 @@ class JdbcNativePostRepository implements PostRepository {
     @Override
     public CompletableFuture<Post> addPost(String title, String text, List<String> tags) {
         return CompletableFuture.supplyAsync(() -> innerAddPost(title, text, tags));
+    }
+
+    @Override
+    public CompletableFuture<Post> editPost(int id, String title, String text, List<String> tags) {
+        return CompletableFuture.supplyAsync(() -> innerEditPost(id, title, text, tags));
     }
 
     private List<Pair<Post, Integer>> innerGetPosts(String search,
@@ -145,15 +158,60 @@ limit :limit
                 (rs, rowNum) -> Pair.of(map(rs), rs.getInt("total_count")));
     }
 
+    private Post innerEditPost(int id, String title, String text, List<String> tags) {
+        upsertTags(tags);
+        var baseSql = """
+with deleted_tags AS (
+    delete from posts_tags
+    using tags
+    where post_id = :id
+        and tag_id = tags.id
+        and tags.name not in (:tags)
+    returning post_id, tag_id
+),
+edit_post as (
+    update posts
+    set
+        title = :title,
+        text = :text
+    where id = :id
+    returning id, title, text, likes_count
+),
+ins_tags AS (
+    insert into posts_tags (post_id, tag_id)
+    select ep.id, t.id
+    from tags t
+    cross join edit_post ep
+    where t.name in (:tags)
+    on conflict (post_id, tag_id) do nothing
+    returning post_id, tag_id
+),
+final_tags as (
+    select post_id, tag_id from posts_tags where post_id = :id
+    except
+    select post_id, tag_id from deleted_tags
+    union
+    select post_id, tag_id from ins_tags
+)
+""" + sqlPostSelect("edit_post").replace("posts_tags", "final_tags");
+
+        var parameters = new MapSqlParameterSource()
+                .addValue("id", id)
+                .addValue("title", title)
+                .addValue("text", text)
+                .addValue("tags", tags);
+        return jdbcTemplate.query(baseSql, parameters, JdbcNativePostRepository::extractPost);
+    }
+
     private Post innerAddPost(String title, String text, List<String> tags) {
         upsertTags(tags);
         var baseSql = """
-WITH new_post AS (
+with new_post as (
     insert into posts (title, text, likes_count)
     values (:title, :text, 0)
     returning id, title, text, likes_count
 ),
-ins_tags AS (
+ins_tags as (
     insert into posts_tags (post_id, tag_id)
     select new_post.id, t.id
     from tags t, new_post
@@ -243,7 +301,7 @@ from\s""" + setOfPosts + """
  r
 left join comments c on c.post_id = r.id
 left join posts_tags pt1 on r.id = pt1.post_id
-join tags t1 on t1.id = pt1.tag_id
+left join tags t1 on t1.id = pt1.tag_id
 group by r.id, r.title, r.text, r.likes_count
 order by r.id
 """;

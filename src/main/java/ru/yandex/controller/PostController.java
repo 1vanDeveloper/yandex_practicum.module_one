@@ -3,6 +3,7 @@ package ru.yandex.controller;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import ru.yandex.controller.dto.AddPostRequest;
+import ru.yandex.controller.dto.EditPostRequest;
 import ru.yandex.controller.dto.PostResponse;
 import ru.yandex.controller.dto.GetPostsResponse;
 import ru.yandex.model.Post;
@@ -81,6 +82,30 @@ public class PostController {
         Post post;
         try {
             post = postRepository.addPost(request.title(), request.text(), request.tags()).get();
+        } catch (InterruptedException | ExecutionException e) {
+            throw new RuntimeException(e);
+        }
+
+        return convert(post);
+    }
+
+    /**
+     * Редактирование поста
+     * @param id идентификатор поста
+     * @return пост
+     */
+    @PutMapping("posts/{id}")
+    @ResponseBody
+    public PostResponse editPost(
+            @PathVariable(name = "id") int id,
+            @RequestBody EditPostRequest request
+    ) {
+        if (request.id() != id) {
+            throw new RuntimeException("ids from path and body are not equal");
+        }
+        Post post;
+        try {
+            post = postRepository.editPost(request.id(), request.title(), request.text(), request.tags()).get();
         } catch (InterruptedException | ExecutionException e) {
             throw new RuntimeException(e);
         }

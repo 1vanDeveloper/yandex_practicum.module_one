@@ -1,5 +1,6 @@
 package ru.yandex.controller;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -14,6 +15,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import ru.yandex.WebConfiguration;
 import ru.yandex.controller.dto.AddPostRequest;
+import ru.yandex.controller.dto.EditPostRequest;
 import ru.yandex.controller.dto.PostResponse;
 import ru.yandex.controller.dto.GetPostsResponse;
 
@@ -21,8 +23,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @ExtendWith(SpringExtension.class)
@@ -159,7 +160,81 @@ public class PostControllerTests {
         var newTag = "Tag-for-new-" + UUID.randomUUID();
         var title = "Заголовок " + UUID.randomUUID();
         var text = "Текст " + UUID.randomUUID() + " " + UUID.randomUUID();
-        var request = new AddPostRequest(title, text, List.of(commonTag, newTag, shareTag));
+
+        // act
+        var postResponse = insertNewPost(title, text, List.of(commonTag, newTag, shareTag));
+
+        // assert
+        assertNotNull(postResponse);
+        assertTrue(postResponse.id() > 4);
+        assertEquals(title, postResponse.title());
+        assertEquals(text, postResponse.text());
+        assertEquals(0, postResponse.likesCount());
+        assertEquals(0, postResponse.commentsCount());
+        assertEquals(3, postResponse.tags().size());
+        assertTrue(postResponse.tags().contains(commonTag));
+        assertTrue(postResponse.tags().contains(shareTag));
+        assertTrue(postResponse.tags().contains(newTag));
+    }
+
+    @Test
+    public void testEditPost() throws Exception {
+        // arrange
+        var commonTag = "Tag-for-all";
+        var shareTag = "Tag-for-3";
+        var newTag = "Tag-for-new-" + UUID.randomUUID();
+        var title = "Заголовок " + UUID.randomUUID();
+        var text = "Текст " + UUID.randomUUID() + " " + UUID.randomUUID();
+
+        var editTag = "Tag-for-edit-" + UUID.randomUUID();
+        var editTitle = "Заголовок отредактирован " + UUID.randomUUID();
+        var editText = "Текст отредактирован " + UUID.randomUUID() + " " + UUID.randomUUID();
+
+        // act
+        var postResponse = insertNewPost(title, text, List.of(commonTag, newTag, shareTag));
+        assertNotNull(postResponse);
+
+        var request = new EditPostRequest(postResponse.id(), editTitle, editText, List.of(commonTag, newTag, editTag));
+        var requestJson = objectMapper.writeValueAsString(request);
+        var result = mockMvc
+                .perform(
+                        put("/api/posts/" + postResponse.id())
+                                .contentType(MediaType.APPLICATION_JSON) // Set the content type
+                                .content(requestJson))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        // assert
+        assertTrue(postResponse.id() > 4);
+        assertEquals(title, postResponse.title());
+        assertEquals(text, postResponse.text());
+        assertEquals(0, postResponse.likesCount());
+        assertEquals(0, postResponse.commentsCount());
+        assertEquals(3, postResponse.tags().size());
+        assertTrue(postResponse.tags().contains(commonTag));
+        assertTrue(postResponse.tags().contains(shareTag));
+        assertTrue(postResponse.tags().contains(newTag));
+
+        var response = result.getResponse();
+        var json = response.getContentAsByteArray();
+        assertNotEquals(0, json.length);
+        var editedResponse = objectMapper.readValue(json, PostResponse.class);
+
+        assertTrue(editedResponse.id() > 4);
+        assertEquals(editTitle, editedResponse.title());
+        assertEquals(editText, editedResponse.text());
+        assertEquals(0, editedResponse.likesCount());
+        assertEquals(0, editedResponse.commentsCount());
+        assertEquals(3, editedResponse.tags().size());
+        assertTrue(editedResponse.tags().contains(commonTag));
+        assertTrue(editedResponse.tags().contains(editTag));
+        assertTrue(editedResponse.tags().contains(newTag));
+    }
+
+    private PostResponse insertNewPost(String title, String text, List<String> tags) throws Exception {
+
+        // arrange
+        var request = new AddPostRequest(title, text, tags);
         var requestJson = objectMapper.writeValueAsString(request);
 
         // act
@@ -174,17 +249,9 @@ public class PostControllerTests {
         // assert
         var response = result.getResponse();
         var json = response.getContentAsByteArray();
-        var postResponse = objectMapper.readValue(json, PostResponse.class);
-
-        assertNotNull(postResponse);
-        assertTrue(postResponse.id() > 4);
-        assertEquals(title, postResponse.title());
-        assertEquals(text, postResponse.text());
-        assertEquals(0, postResponse.likesCount());
-        assertEquals(0, postResponse.commentsCount());
-        assertEquals(3, postResponse.tags().size());
-        assertTrue(postResponse.tags().contains(commonTag));
-        assertTrue(postResponse.tags().contains(shareTag));
-        assertTrue(postResponse.tags().contains(newTag));
+        if (json.length == 0) {
+            return null;
+        }
+        return objectMapper.readValue(json, PostResponse.class);
     }
 }
