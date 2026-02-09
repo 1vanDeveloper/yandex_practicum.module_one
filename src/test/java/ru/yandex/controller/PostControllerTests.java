@@ -279,6 +279,29 @@ public class PostControllerTests {
         assertNull(deletedPost);
     }
 
+    @Test
+    public void likeIncrease() throws Exception {
+        // arrange
+        var existsPost = postRepository.getPost(2).get();
+
+        // act
+        var result = mockMvc
+                .perform(post("/api/posts/" + existsPost.getId() + "/likes")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(""))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        // assert
+        var response = result.getResponse();
+        var json = response.getContentAsByteArray();
+        var likes = objectMapper.readValue(json, Integer.class);
+
+        var updatedPost = postRepository.getPost(existsPost.getId()).get();
+        assertEquals((int) likes, updatedPost.getLikesCount());
+        assertEquals((int) likes, existsPost.getLikesCount() + 1);
+    }
+
     private PostResponse insertNewPost(String title, String text, List<String> tags) throws Exception {
 
         // arrange

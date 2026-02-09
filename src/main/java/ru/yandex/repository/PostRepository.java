@@ -52,6 +52,11 @@ public interface PostRepository {
     CompletableFuture<Void> deletePost(
             int id
     );
+
+    @Async
+    CompletableFuture<Integer> likeIncrease(
+            int id
+    );
 }
 
 class JdbcNativePostRepository implements PostRepository {
@@ -94,6 +99,31 @@ class JdbcNativePostRepository implements PostRepository {
     @Override
     public CompletableFuture<Void> deletePost(int id) {
         return CompletableFuture.supplyAsync(() -> innerDeletePost(id));
+    }
+
+    @Override
+    public CompletableFuture<Integer> likeIncrease(int id) {
+        return CompletableFuture.supplyAsync(() -> innerLikeIncrease(id));
+    }
+
+    private Integer innerLikeIncrease(int id) {
+        var baseSql = """
+update posts
+set
+    likes_count = likes_count + 1
+where
+    id = :post_id
+returning likes_count
+""";
+
+        var parameters = new MapSqlParameterSource()
+                .addValue("post_id", id);
+        return jdbcTemplate.query(baseSql, parameters, rs -> {
+            if (rs.next()) {
+                return rs.getInt("likes_count");
+            }
+            return 0;
+        });
     }
 
     private List<Pair<Post, Integer>> innerGetPosts(String search,

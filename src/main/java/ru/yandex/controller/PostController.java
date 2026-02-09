@@ -142,4 +142,15 @@ public class PostController {
                 post.getCommentsCount()
         );
     }
+
+    @PostMapping("posts/{id}/likes")
+    @ResponseBody
+    public int likeIncrease(
+            @PathVariable(name = "id") int id) {
+        try {
+            return postRepository.likeIncrease(id).get();
+        } catch (InterruptedException | ExecutionException e) {
+            throw new RuntimeException(e);
+        }
+    }
 }
