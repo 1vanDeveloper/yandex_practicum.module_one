@@ -1,11 +1,14 @@
 package ru.yandex.repository;
 
-import org.postgresql.ds.PGSimpleDataSource;
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.jdbc.datasource.DataSourceTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import javax.sql.DataSource;
 
@@ -23,11 +26,16 @@ public class RepositoryConfiguration {
             @Value("${spring.datasource.username}") String username,
             @Value("${spring.datasource.password}") String password
     ) {
-        PGSimpleDataSource dataSource = new PGSimpleDataSource();
-        dataSource.setUrl(url);
-        dataSource.setUser(username);
-        dataSource.setPassword(password);
-        return dataSource;
+        HikariConfig config = new HikariConfig();
+        config.setJdbcUrl(url);
+        config.setUsername(username);
+        config.setPassword(password);
+
+        // Оптимизации для Postgres
+        config.addDataSourceProperty("cachePrepStmts", "true");
+        config.addDataSourceProperty("prepStmtCacheSize", "250");
+
+        return new HikariDataSource(config);
     }
 
     /**
@@ -39,10 +47,27 @@ public class RepositoryConfiguration {
     }
 
     /**
+     * Управление транзакциями
+     */
+    @Bean
+    public TransactionTemplate transactionTemplate(DataSource dataSource) {
+        var manager = new DataSourceTransactionManager(dataSource);
+        return new TransactionTemplate(manager);
+    }
+
+    /**
      * Репозиторий управления постами
      */
     @Bean
     public PostRepository postRepository(NamedParameterJdbcTemplate jdbcTemplate, Logger logger) {
         return new JdbcNativePostRepository(jdbcTemplate, logger);
+    }
+
+    /**
+     * Репозиторий управления изображениями
+     */
+    @Bean
+    public ImageRepository imageRepository(NamedParameterJdbcTemplate jdbcTemplate, TransactionTemplate transactionTemplate) {
+        return new JdbcNativeImageRepository(jdbcTemplate, transactionTemplate);
     }
 }

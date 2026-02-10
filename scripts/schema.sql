@@ -28,3 +28,10 @@ CREATE TABLE IF NOT EXISTS posts_tags(
     tag_id INT REFERENCES tags(id),
     PRIMARY KEY (post_id, tag_id)
 );
+
+CREATE TABLE IF NOT EXISTS images(
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    post_id INT REFERENCES posts(id) UNIQUE,
+    file_name TEXT,
+    content BYTEA
+);
