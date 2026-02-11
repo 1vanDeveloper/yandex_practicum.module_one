@@ -1,3 +1,37 @@
-# yandex_practicum.module_one
+# Работа по Yandex Practicum Middle Java-разработчик
 
-Home project with Spring tasks
+## Запуск тестов в IDE
+Выполните команду в корне проекта:
+```shell
+docker-compose up --force-recreate --renew-anon-volumes -d
+```
+Поднимется контейнер СУБД PostgreSQL необходимый для интеграционного тестирования.
+Docker-compose настроен так, что при запуске контейнера PostgreSQL будет инициализирована схема данных и некоторые данные для тестирования.
+
+Скрипты sql находятся по адресу:
+```shell
+/scripts/schema.sql # схема БД
+/scripts/data.sql # данные для наполнения БД
+```
+
+## Сборка и запуск приложения
+Для сборки `war`-файла выполните команду в корне проекта:
+```shell
+./gradlew war
+```
+После выполнения команды будет собран файл приложения по адресу:
+```shell
+/build/libs/blog-app-1.0.war
+```
+Файл необходимо перенести в рабочую директорию Tomcat. 
+Либо назначить полученный файл корневым приложением, выполнив следующую настройку:
+1. В корневой папке Tomcat создать директорию: `/conf/Catalina/localhost`.
+2. В папке `localhost` создать файл `ROOT.xml` со следующим содержанием:
+```xml
+<Context docBase="../../yandex_practicum.module_one/build/libs/blog-app-1.0.war"/>
+```
+В атрибуте `docBase` указан относительный путь до собранного приложения `war`.
+3. Перезапустите Tomcat, если изменения не произошли.
+
+## Примечания
+`Swagger` после запуска приложения доступен по адресу: `http://{tomcatHost}/swagger-ui/index.html`.
