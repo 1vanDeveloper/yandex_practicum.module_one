@@ -9,30 +9,21 @@ public class Comment {
     private String text;
     private int postId;
 
-    public Comment() {
+    public Comment(long id, String text, int postId) {
+        this.id = id;
+        this.text = text;
+        this.postId = postId;
     }
 
     public long getId() {
         return id;
     }
 
-    public void setId(long id) {
-        this.id = id;
-    }
-
     public String getText() {
         return text;
     }
 
-    public void setText(String text) {
-        this.text = text;
-    }
-
     public int getPostId() {
         return postId;
-    }
-
-    public void setPostId(int postId) {
-        this.postId = postId;
     }
 }

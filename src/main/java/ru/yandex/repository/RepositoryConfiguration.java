@@ -70,4 +70,12 @@ public class RepositoryConfiguration {
     public ImageRepository imageRepository(NamedParameterJdbcTemplate jdbcTemplate, TransactionTemplate transactionTemplate) {
         return new JdbcNativeImageRepository(jdbcTemplate, transactionTemplate);
     }
+
+    /**
+     * Репозиторий управления комментариями
+     */
+    @Bean
+    public CommentRepository commentRepository(NamedParameterJdbcTemplate jdbcTemplate) {
+        return new JdbcNativeCommentRepository(jdbcTemplate);
+    }
 }

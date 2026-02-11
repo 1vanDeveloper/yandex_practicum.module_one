@@ -34,7 +34,7 @@ public class ImageControllerTests {
     }
 
     @Test
-    void uploadImage_emptyFile_badRequest() throws Exception {
+    void testUploadImage_emptyFile_badRequest() throws Exception {
         MockMultipartFile empty = new MockMultipartFile("file", "empty.png", "image/png", new byte[0]);
 
         mockMvc.perform(multipart(HttpMethod.PUT, "/api/posts/{id}/image", 1L).file(empty))
@@ -43,7 +43,7 @@ public class ImageControllerTests {
     }
 
     @Test
-    void uploadImage_emptyFileName_badRequest() throws Exception {
+    void testUploadImage_emptyFileName_badRequest() throws Exception {
         MockMultipartFile empty = new MockMultipartFile("file", "", "image/png", new byte[]{1, 2, 3});
 
         mockMvc.perform(multipart(HttpMethod.PUT, "/api/posts/{id}/image", 1L).file(empty))
@@ -52,7 +52,7 @@ public class ImageControllerTests {
     }
 
     @Test
-    void uploadImage_emptyFileNameExtension_badRequest() throws Exception {
+    void testUploadImage_emptyFileNameExtension_badRequest() throws Exception {
         MockMultipartFile empty = new MockMultipartFile("file", "empty", "image/png", new byte[]{1, 2, 3});
 
         mockMvc.perform(multipart(HttpMethod.PUT, "/api/posts/{id}/image", 1L).file(empty))
@@ -61,13 +61,13 @@ public class ImageControllerTests {
     }
 
     @Test
-    void getImage_imageNotFound_400() throws Exception {
+    void testGetImage_imageNotFound_400() throws Exception {
         mockMvc.perform(get("/api/posts/0/image"))
                 .andExpect(status().isBadRequest());
     }
 
     @Test
-    void uploadAndGetImage_success() throws Exception {
+    void testUploadAndGetImage_success() throws Exception {
         var pngStub = new byte[]{(byte) 137, 80, 78, 71};
         var fileName = "post_image.png";
         MockMultipartFile file = new MockMultipartFile("file", fileName, "image/png", pngStub);

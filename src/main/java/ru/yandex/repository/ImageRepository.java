@@ -10,7 +10,6 @@ import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.sql.Types;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -47,8 +46,8 @@ class JdbcNativeImageRepository implements ImageRepository {
         var baseSql = """
 insert into images (post_id, file_name, content)
 values (:post_id, :file_name, :content)
-ON CONFLICT (post_id)\s
-DO UPDATE SET\s
+on conflict (post_id)
+do update set
     file_name = EXCLUDED.file_name,
     content = EXCLUDED.content
 """;
