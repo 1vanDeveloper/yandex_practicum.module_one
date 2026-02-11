@@ -22,11 +22,13 @@ public class RepositoryConfiguration {
      */
     @Bean
     public DataSource dataSource(
+            @Value("${spring.datasource.driver-class-name}") String driverClassName,
             @Value("${spring.datasource.url}") String url,
             @Value("${spring.datasource.username}") String username,
             @Value("${spring.datasource.password}") String password
     ) {
         HikariConfig config = new HikariConfig();
+        config.setDriverClassName(driverClassName);
         config.setJdbcUrl(url);
         config.setUsername(username);
         config.setPassword(password);

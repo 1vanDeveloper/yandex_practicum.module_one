@@ -35,7 +35,7 @@ public class ImageControllerTests {
 
     @Test
     void testUploadImage_emptyFile_badRequest() throws Exception {
-        MockMultipartFile empty = new MockMultipartFile("file", "empty.png", "image/png", new byte[0]);
+        MockMultipartFile empty = new MockMultipartFile("image", "empty.png", "image/png", new byte[0]);
 
         mockMvc.perform(multipart(HttpMethod.PUT, "/api/posts/{id}/image", 1L).file(empty))
                 .andExpect(status().isBadRequest())
@@ -44,7 +44,7 @@ public class ImageControllerTests {
 
     @Test
     void testUploadImage_emptyFileName_badRequest() throws Exception {
-        MockMultipartFile empty = new MockMultipartFile("file", "", "image/png", new byte[]{1, 2, 3});
+        MockMultipartFile empty = new MockMultipartFile("image", "", "image/png", new byte[]{1, 2, 3});
 
         mockMvc.perform(multipart(HttpMethod.PUT, "/api/posts/{id}/image", 1L).file(empty))
                 .andExpect(status().isBadRequest())
@@ -53,7 +53,7 @@ public class ImageControllerTests {
 
     @Test
     void testUploadImage_emptyFileNameExtension_badRequest() throws Exception {
-        MockMultipartFile empty = new MockMultipartFile("file", "empty", "image/png", new byte[]{1, 2, 3});
+        MockMultipartFile empty = new MockMultipartFile("image", "empty", "image/png", new byte[]{1, 2, 3});
 
         mockMvc.perform(multipart(HttpMethod.PUT, "/api/posts/{id}/image", 1L).file(empty))
                 .andExpect(status().isBadRequest())
@@ -70,7 +70,7 @@ public class ImageControllerTests {
     void testUploadAndGetImage_success() throws Exception {
         var pngStub = new byte[]{(byte) 137, 80, 78, 71};
         var fileName = "post_image.png";
-        MockMultipartFile file = new MockMultipartFile("file", fileName, "image/png", pngStub);
+        MockMultipartFile file = new MockMultipartFile("image", fileName, "image/png", pngStub);
 
         mockMvc.perform(multipart(HttpMethod.PUT,"/api/posts/{id}/image", 1L).file(file))
                 .andExpect(status().isOk())

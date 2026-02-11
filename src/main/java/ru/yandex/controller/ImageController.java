@@ -29,7 +29,7 @@ public class ImageController {
      */
     @PutMapping(path = "/{id}/image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<String> uploadImage(@PathVariable("id") int postId,
-                                 @RequestParam("file") MultipartFile file) {
+                                 @RequestParam("image") MultipartFile file) {
         if (file.isEmpty()) {
             return ResponseEntity.badRequest().body("empty file");
         }

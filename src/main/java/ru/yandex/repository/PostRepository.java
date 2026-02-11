@@ -222,21 +222,25 @@ where id = :post_id;
     private Post innerEditPost(int id, String title, String text, List<String> tags) {
         upsertTags(tags);
         var baseSql = """
-with deleted_tags AS (
-    delete from posts_tags
-    using tags
-    where post_id = :id
-        and tag_id = tags.id
-        and tags.name not in (:tags)
-    returning post_id, tag_id
-),
-edit_post as (
+with edit_post as (
     update posts
     set
         title = :title,
         text = :text
     where id = :id
     returning id, title, text, likes_count
+)
+""";
+        if (!tags.isEmpty())
+            baseSql += """
+,
+deleted_tags AS (
+    delete from posts_tags
+    using tags
+    where post_id = :id
+        and tag_id = tags.id
+        and tags.name not in (:tags)
+    returning post_id, tag_id
 ),
 ins_tags AS (
     insert into posts_tags (post_id, tag_id)
@@ -254,7 +258,12 @@ final_tags as (
     union
     select post_id, tag_id from ins_tags
 )
-""" + sqlPostSelect("edit_post").replace("posts_tags", "final_tags");
+""";
+        if (tags.isEmpty()) {
+            baseSql += sqlPostSelect("edit_post");
+        } else {
+            baseSql += sqlPostSelect("edit_post").replace("posts_tags", "final_tags");
+        }
 
         var parameters = new MapSqlParameterSource()
                 .addValue("id", id)
@@ -302,6 +311,10 @@ order by p.id
     }
 
     private void upsertTags(List<String> tags) {
+        if (tags.isEmpty()) {
+            return;
+        }
+
         var sql = """
 insert into tags (name)
 values (:name)
