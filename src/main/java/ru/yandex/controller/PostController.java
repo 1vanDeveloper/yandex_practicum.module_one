@@ -77,7 +77,7 @@ public class PostController {
     @Async
     @PostMapping("posts")
     @ResponseBody
-    public CompletableFuture<PostResponse> addPost(@RequestBody @Valid AddPostRequest request) {
+    public CompletableFuture<PostResponse> addPost(@Valid @RequestBody AddPostRequest request) {
         return postService.addPost(request.title(), request.text(), request.tags())
                 .thenApplyAsync(PostController::convert);
     }
@@ -92,7 +92,7 @@ public class PostController {
     @ResponseBody
     public CompletableFuture<PostResponse> editPost(
             @PathVariable(name = "id") @Min(1) int id,
-            @RequestBody @Valid EditPostRequest request
+            @Valid @RequestBody EditPostRequest request
     ) {
         if (request.id() != id) {
             throw new RuntimeException("ids from path and body are not equal");

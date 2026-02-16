@@ -68,7 +68,7 @@ public class CommentController {
     @ResponseBody
     public CompletableFuture<CommentResponse> addComment(
             @PathVariable(name = "postId") @Min(1) int postId,
-            @RequestBody @Valid AddCommentRequest request) {
+            @Valid @RequestBody AddCommentRequest request) {
         return commentService.addComment(request.postId(), request.text())
                 .thenApplyAsync(CommentController::convert);
     }
@@ -85,7 +85,7 @@ public class CommentController {
     public CompletableFuture<CommentResponse> updateComment(
             @PathVariable(name = "postId") @Min(1) int postId,
             @PathVariable(name = "commentId") @Min(1) long commentId,
-            @RequestBody @Valid UpdateCommentRequest request) {
+            @Valid @RequestBody UpdateCommentRequest request) {
         return commentService.updateComment(request.id(), request.text(), request.postId())
                 .thenApplyAsync(CommentController::convert);
     }

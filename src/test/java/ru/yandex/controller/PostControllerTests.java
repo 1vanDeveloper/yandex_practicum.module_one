@@ -147,7 +147,7 @@ public class PostControllerTests {
     public void testGetPost_byId_postNotExists() throws Exception {
 
         // act
-        var result = mockMvc.perform(get("/api/posts/0"))
+        var result = mockMvc.perform(get("/api/posts/100000000"))
                 .andReturn();
         mockMvc.perform(asyncDispatch(result))
                 .andExpect(status().isOk());

@@ -71,7 +71,7 @@ public class ImageControllerTests {
 
     @Test
     void testGetImage_imageNotFound_400() throws Exception {
-        var result = mockMvc.perform(get("/api/posts/0/image"))
+        var result = mockMvc.perform(get("/api/posts/10000000/image"))
                 .andReturn();
 
         mockMvc.perform(asyncDispatch(result))
