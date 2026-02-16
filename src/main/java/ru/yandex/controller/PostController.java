@@ -8,7 +8,7 @@ import ru.yandex.controller.dto.EditPostRequest;
 import ru.yandex.controller.dto.PostResponse;
 import ru.yandex.controller.dto.GetPostsResponse;
 import ru.yandex.model.Post;
-import ru.yandex.repository.PostRepository;
+import ru.yandex.service.PostService;
 
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
@@ -21,11 +21,11 @@ import java.util.concurrent.CompletableFuture;
 @RequestMapping("/api/")
 public class PostController {
 
-    private final PostRepository postRepository;
+    private final PostService postService;
 
     @Autowired
-    public PostController(PostRepository postRepository) {
-        this.postRepository = postRepository;
+    public PostController(PostService postService) {
+        this.postService = postService;
     }
 
     /**
@@ -45,7 +45,7 @@ public class PostController {
     ) {
         search = URLDecoder.decode(search, StandardCharsets.UTF_8);
 
-        return postRepository.getPosts(search, pageNumber, pageSize)
+        return postService.getPosts(search, pageNumber, pageSize)
                 .thenApplyAsync(searchResult -> {
                     var responsePosts = searchResult.posts().stream().map(PostController::convert).toList();
                     return new GetPostsResponse(responsePosts, searchResult.hasPrev(), searchResult.hasNext(), searchResult.lastPage());
@@ -63,7 +63,7 @@ public class PostController {
     public CompletableFuture<PostResponse> getPost(
             @PathVariable(name = "id") int id
     ) {
-        return postRepository.getPost(id).thenApplyAsync(PostController::convert);
+        return postService.getPost(id).thenApplyAsync(PostController::convert);
     }
 
     /**
@@ -73,7 +73,7 @@ public class PostController {
     @PostMapping("posts")
     @ResponseBody
     public CompletableFuture<PostResponse> addPost(@RequestBody AddPostRequest request) {
-        return postRepository.addPost(request.title(), request.text(), request.tags())
+        return postService.addPost(request.title(), request.text(), request.tags())
                 .thenApplyAsync(PostController::convert);
     }
 
@@ -93,7 +93,7 @@ public class PostController {
             throw new RuntimeException("ids from path and body are not equal");
         }
 
-        return postRepository.editPost(request.id(), request.title(), request.text(), request.tags())
+        return postService.editPost(request.id(), request.title(), request.text(), request.tags())
                 .thenApplyAsync(PostController::convert);
     }
 
@@ -106,7 +106,7 @@ public class PostController {
     @ResponseBody
     public CompletableFuture<Void> deletePost(
             @PathVariable(name = "id") int id) {
-        return postRepository.deletePost(id);
+        return postService.deletePost(id);
     }
 
     /**
@@ -117,7 +117,7 @@ public class PostController {
     @ResponseBody
     public CompletableFuture<Integer> likeIncrease(
             @PathVariable(name = "id") int id) {
-        return postRepository.likeIncrease(id);
+        return postService.likeIncrease(id);
     }
 
     private static PostResponse convert(Post post) {

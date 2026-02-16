@@ -8,18 +8,18 @@ import ru.yandex.controller.dto.CommentResponse;
 import ru.yandex.controller.dto.CommentsResponse;
 import ru.yandex.controller.dto.UpdateCommentRequest;
 import ru.yandex.model.Comment;
-import ru.yandex.repository.CommentRepository;
+import ru.yandex.service.CommentService;
 
 import java.util.concurrent.CompletableFuture;
 
 @RestController
 @RequestMapping("/api/posts/{postId}/comments")
 public class CommentController {
-    private final CommentRepository commentRepository;
+    private final CommentService commentService;
 
     @Autowired
-    public CommentController(CommentRepository commentRepository) {
-        this.commentRepository = commentRepository;
+    public CommentController(CommentService commentService) {
+        this.commentService = commentService;
     }
 
     /**
@@ -31,7 +31,7 @@ public class CommentController {
     @GetMapping()
     @ResponseBody
     public CompletableFuture<CommentsResponse> getComments(@PathVariable(name = "postId") int postId) {
-        return commentRepository.getComments(postId).thenApplyAsync(comments -> {
+        return commentService.getComments(postId).thenApplyAsync(comments -> {
             var response = new CommentsResponse();
             response.addAll(comments.stream().map(CommentController::convert).toList());
             return response;
@@ -50,7 +50,7 @@ public class CommentController {
     public CompletableFuture<CommentResponse> getComment(
             @PathVariable(name = "postId") int postId,
             @PathVariable(name = "commentId") int commentId) {
-        return commentRepository.getComment(commentId)
+        return commentService.getComment(commentId)
                 .thenApplyAsync(CommentController::convert);
     }
 
@@ -65,7 +65,7 @@ public class CommentController {
     public CompletableFuture<CommentResponse> addComment(
             @PathVariable(name = "postId") int postId,
             @RequestBody AddCommentRequest request) {
-        return commentRepository.addComment(request.postId(), request.text())
+        return commentService.addComment(request.postId(), request.text())
                 .thenApplyAsync(CommentController::convert);
     }
 
@@ -82,7 +82,7 @@ public class CommentController {
             @PathVariable(name = "postId") int postId,
             @PathVariable(name = "commentId") long commentId,
             @RequestBody UpdateCommentRequest request) {
-        return commentRepository.updateComment(request.id(), request.text(), request.postId())
+        return commentService.updateComment(request.id(), request.text(), request.postId())
                 .thenApplyAsync(CommentController::convert);
     }
 
@@ -97,7 +97,7 @@ public class CommentController {
     public CompletableFuture<Void> updateComment(
             @PathVariable(name = "postId") int postId,
             @PathVariable(name = "commentId") long commentId) {
-        return commentRepository.deleteComment(commentId);
+        return commentService.deleteComment(commentId);
     }
 
     private static CommentResponse convert(Comment comment) {

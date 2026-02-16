@@ -9,7 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import ru.yandex.repository.ImageRepository;
+import ru.yandex.service.ImageService;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -17,11 +17,11 @@ import java.util.concurrent.CompletableFuture;
 @RequestMapping("/api/posts")
 public class ImageController {
 
-    private final ImageRepository imageRepository;
+    private final ImageService imageService;
 
     @Autowired
-    public ImageController(ImageRepository imageRepository) {
-        this.imageRepository = imageRepository;
+    public ImageController(ImageService imageService) {
+        this.imageService = imageService;
     }
 
     /**
@@ -49,7 +49,7 @@ public class ImageController {
             return CompletableFuture.completedFuture(ResponseEntity.badRequest().body("file name has not extension"));
         }
 
-        return imageRepository.saveImage(file, postId)
+        return imageService.saveImage(file, postId)
                 .thenApplyAsync(r -> ResponseEntity.status(HttpStatus.OK).body("ok"))
                 .exceptionally(e -> ResponseEntity.badRequest().body("upload failed: " + e.getMessage()));
     }
@@ -62,7 +62,7 @@ public class ImageController {
     @Async
     @GetMapping(path = "/{id}/image")
     public CompletableFuture<ResponseEntity<Resource>> getImage(@PathVariable("id") int postId) {
-        return imageRepository.getImage(postId).thenApplyAsync(resource -> {
+        return imageService.getImage(postId).thenApplyAsync(resource -> {
                     if (resource == null) {
                         return ResponseEntity.badRequest().<Resource>build();
                     }
