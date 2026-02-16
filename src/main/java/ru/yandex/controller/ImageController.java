@@ -1,5 +1,6 @@
 package ru.yandex.controller;
 
+import jakarta.validation.constraints.Min;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
@@ -7,6 +8,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import ru.yandex.service.ImageService;
@@ -15,6 +17,7 @@ import java.util.concurrent.CompletableFuture;
 
 @RestController
 @RequestMapping("/api/posts")
+@Validated
 public class ImageController {
 
     private final ImageService imageService;
@@ -32,7 +35,7 @@ public class ImageController {
      */
     @Async
     @PutMapping(path = "/{id}/image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public CompletableFuture<ResponseEntity<String>> uploadImage(@PathVariable("id") int postId,
+    public CompletableFuture<ResponseEntity<String>> uploadImage(@PathVariable("id") @Min(1) int postId,
                                                                 @RequestParam("image") MultipartFile file) {
         if (file.isEmpty()) {
             return CompletableFuture.completedFuture(ResponseEntity.badRequest().body("empty file"));
@@ -61,7 +64,7 @@ public class ImageController {
      */
     @Async
     @GetMapping(path = "/{id}/image")
-    public CompletableFuture<ResponseEntity<Resource>> getImage(@PathVariable("id") int postId) {
+    public CompletableFuture<ResponseEntity<Resource>> getImage(@PathVariable("id") @Min(1) int postId) {
         return imageService.getImage(postId).thenApplyAsync(resource -> {
                     if (resource == null) {
                         return ResponseEntity.badRequest().<Resource>build();

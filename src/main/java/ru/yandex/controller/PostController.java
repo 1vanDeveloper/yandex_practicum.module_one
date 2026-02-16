@@ -1,7 +1,11 @@
 package ru.yandex.controller;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import ru.yandex.controller.dto.AddPostRequest;
 import ru.yandex.controller.dto.EditPostRequest;
@@ -19,6 +23,7 @@ import java.util.concurrent.CompletableFuture;
  */
 @RestController
 @RequestMapping("/api/")
+@Validated
 public class PostController {
 
     private final PostService postService;
@@ -40,8 +45,8 @@ public class PostController {
     @ResponseBody
     public CompletableFuture<GetPostsResponse> getPosts(
             @RequestParam(name = "search") String search,
-            @RequestParam(name = "pageNumber") int pageNumber,
-            @RequestParam(name = "pageSize") int pageSize
+            @RequestParam(name = "pageNumber") @Min(1) int pageNumber,
+            @RequestParam(name = "pageSize") @Min(1) @Max(100) int pageSize
     ) {
         search = URLDecoder.decode(search, StandardCharsets.UTF_8);
 
@@ -61,7 +66,7 @@ public class PostController {
     @GetMapping("posts/{id}")
     @ResponseBody
     public CompletableFuture<PostResponse> getPost(
-            @PathVariable(name = "id") int id
+            @PathVariable(name = "id") @Min(1) int id
     ) {
         return postService.getPost(id).thenApplyAsync(PostController::convert);
     }
@@ -72,7 +77,7 @@ public class PostController {
     @Async
     @PostMapping("posts")
     @ResponseBody
-    public CompletableFuture<PostResponse> addPost(@RequestBody AddPostRequest request) {
+    public CompletableFuture<PostResponse> addPost(@RequestBody @Valid AddPostRequest request) {
         return postService.addPost(request.title(), request.text(), request.tags())
                 .thenApplyAsync(PostController::convert);
     }
@@ -86,8 +91,8 @@ public class PostController {
     @PutMapping("posts/{id}")
     @ResponseBody
     public CompletableFuture<PostResponse> editPost(
-            @PathVariable(name = "id") int id,
-            @RequestBody EditPostRequest request
+            @PathVariable(name = "id") @Min(1) int id,
+            @RequestBody @Valid EditPostRequest request
     ) {
         if (request.id() != id) {
             throw new RuntimeException("ids from path and body are not equal");
@@ -105,7 +110,7 @@ public class PostController {
     @DeleteMapping("posts/{id}")
     @ResponseBody
     public CompletableFuture<Void> deletePost(
-            @PathVariable(name = "id") int id) {
+            @PathVariable(name = "id") @Min(1) int id) {
         return postService.deletePost(id);
     }
 
@@ -116,7 +121,7 @@ public class PostController {
     @PostMapping("posts/{id}/likes")
     @ResponseBody
     public CompletableFuture<Integer> likeIncrease(
-            @PathVariable(name = "id") int id) {
+            @PathVariable(name = "id") @Min(1) int id) {
         return postService.likeIncrease(id);
     }
 
