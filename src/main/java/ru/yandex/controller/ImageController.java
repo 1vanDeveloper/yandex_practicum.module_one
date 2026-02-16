@@ -6,9 +6,12 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import ru.yandex.repository.ImageRepository;
+
+import java.util.concurrent.CompletableFuture;
 
 @RestController
 @RequestMapping("/api/posts")
@@ -27,31 +30,28 @@ public class ImageController {
      * @param file файл с картинкой для записи
      * @return строка с ошибкой, если произошла
      */
+    @Async
     @PutMapping(path = "/{id}/image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<String> uploadImage(@PathVariable("id") int postId,
-                                 @RequestParam("image") MultipartFile file) {
+    public CompletableFuture<ResponseEntity<String>> uploadImage(@PathVariable("id") int postId,
+                                                                @RequestParam("image") MultipartFile file) {
         if (file.isEmpty()) {
-            return ResponseEntity.badRequest().body("empty file");
+            return CompletableFuture.completedFuture(ResponseEntity.badRequest().body("empty file"));
         }
 
-        try {
-            var originalFilename = file.getOriginalFilename();
-            if (originalFilename == null || originalFilename.isEmpty()) {
-                return ResponseEntity.badRequest().body("empty file name");
-            }
-
-            var fileExtension = originalFilename.substring(originalFilename.lastIndexOf(".") + 1);
-            if (originalFilename.lastIndexOf(".") == -1 || fileExtension.isEmpty())
-            {
-                return ResponseEntity.badRequest().body("file name has not extension");
-            }
-
-            imageRepository.saveImage(file, postId).get();
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body("upload failed: " + e.getMessage());
+        var originalFilename = file.getOriginalFilename();
+        if (originalFilename == null || originalFilename.isEmpty()) {
+            return CompletableFuture.completedFuture(ResponseEntity.badRequest().body("empty file name"));
         }
 
-        return ResponseEntity.status(HttpStatus.OK).body("ok");
+        var fileExtension = originalFilename.substring(originalFilename.lastIndexOf(".") + 1);
+        if (originalFilename.lastIndexOf(".") == -1 || fileExtension.isEmpty())
+        {
+            return CompletableFuture.completedFuture(ResponseEntity.badRequest().body("file name has not extension"));
+        }
+
+        return imageRepository.saveImage(file, postId)
+                .thenApplyAsync(r -> ResponseEntity.status(HttpStatus.OK).body("ok"))
+                .exceptionally(e -> ResponseEntity.badRequest().body("upload failed: " + e.getMessage()));
     }
 
     /**
@@ -59,21 +59,19 @@ public class ImageController {
      * @param postId идентификатор поста
      * @return тело картинки
      */
+    @Async
     @GetMapping(path = "/{id}/image")
-    public ResponseEntity<Resource> getImage(@PathVariable("id") int postId) {
-        try {
-            var resource = imageRepository.getImage(postId).get();
+    public CompletableFuture<ResponseEntity<Resource>> getImage(@PathVariable("id") int postId) {
+        return imageRepository.getImage(postId).thenApplyAsync(resource -> {
+                    if (resource == null) {
+                        return ResponseEntity.badRequest().<Resource>build();
+                    }
 
-            if (resource == null) {
-                return ResponseEntity.badRequest().build();
-            }
-
-            return ResponseEntity.ok()
-                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + resource.getRight() + "\"")
-                    .body(resource.getLeft());
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().build();
-        }
+                    return ResponseEntity.ok()
+                            .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + resource.getRight() + "\"")
+                            .body(resource.getLeft());
+                })
+                .exceptionallyAsync(ex -> ResponseEntity.badRequest().build());
     }
 }

@@ -48,8 +48,9 @@ public class CommentControllerTests {
 
         // act
         var result = mockMvc.perform(get("/api/posts/{postId}/comments", 1))
-                .andExpect(status().isOk())
                 .andReturn();
+        mockMvc.perform(asyncDispatch(result))
+                .andExpect(status().isOk());
 
         // assert
         var response = result.getResponse();
@@ -66,8 +67,9 @@ public class CommentControllerTests {
 
         // act
         var result = mockMvc.perform(get("/api/posts/{postId}/comments/{commentId}", 1, 2))
-                .andExpect(status().isOk())
                 .andReturn();
+        mockMvc.perform(asyncDispatch(result))
+                .andExpect(status().isOk());
 
         // assert
         var response = result.getResponse();
@@ -87,8 +89,9 @@ public class CommentControllerTests {
         var result = mockMvc.perform(post("/api/posts/{postId}/comments", 2)
                         .contentType(MediaType.APPLICATION_JSON) // Set the content type
                         .content(requestJson))
-                .andExpect(status().isOk())
                 .andReturn();
+        mockMvc.perform(asyncDispatch(result))
+                .andExpect(status().isOk());
 
         // assert
         var response = result.getResponse();
@@ -114,8 +117,9 @@ public class CommentControllerTests {
         var result = mockMvc.perform(put("/api/posts/{postId}/comments/{commentId}", postId, comment.getId())
                         .contentType(MediaType.APPLICATION_JSON) // Set the content type
                         .content(editRequestJson))
-                .andExpect(status().isOk())
                 .andReturn();
+        mockMvc.perform(asyncDispatch(result))
+                .andExpect(status().isOk());
 
         // assert
         var response = result.getResponse();
@@ -137,8 +141,9 @@ public class CommentControllerTests {
 
         // act
         var result = mockMvc.perform(delete("/api/posts/{postId}/comments/{commentId}", postId, comment.getId()))
-                .andExpect(status().isOk())
                 .andReturn();
+        mockMvc.perform(asyncDispatch(result))
+                .andExpect(status().isOk());
 
         // assert
         var deletedComment = commentRepository.getComment(comment.getId()).get();

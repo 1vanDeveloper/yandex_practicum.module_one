@@ -1,6 +1,7 @@
 package ru.yandex.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.web.bind.annotation.*;
 import ru.yandex.controller.dto.AddPostRequest;
 import ru.yandex.controller.dto.EditPostRequest;
@@ -8,11 +9,10 @@ import ru.yandex.controller.dto.PostResponse;
 import ru.yandex.controller.dto.GetPostsResponse;
 import ru.yandex.model.Post;
 import ru.yandex.repository.PostRepository;
-import ru.yandex.repository.dto.SearchResult;
 
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
-import java.util.concurrent.ExecutionException;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Контреллер по управлению постами
@@ -35,22 +35,21 @@ public class PostController {
      * @param pageSize размер страницы поиска
      * @return результат поиска
      */
+    @Async
     @GetMapping("posts")
     @ResponseBody
-    public GetPostsResponse getPosts(
+    public CompletableFuture<GetPostsResponse> getPosts(
             @RequestParam(name = "search") String search,
             @RequestParam(name = "pageNumber") int pageNumber,
             @RequestParam(name = "pageSize") int pageSize
     ) {
         search = URLDecoder.decode(search, StandardCharsets.UTF_8);
-        SearchResult searchResult;
-        try {
-            searchResult = postRepository.getPosts(search, pageNumber, pageSize).get();
-        } catch (InterruptedException | ExecutionException e) {
-            throw new RuntimeException(e);
-        }
-        var responsePosts = searchResult.posts().stream().map(PostController::convert).toList();
-        return new GetPostsResponse(responsePosts, searchResult.hasPrev(), searchResult.hasNext(), searchResult.lastPage());
+
+        return postRepository.getPosts(search, pageNumber, pageSize)
+                .thenApplyAsync(searchResult -> {
+                    var responsePosts = searchResult.posts().stream().map(PostController::convert).toList();
+                    return new GetPostsResponse(responsePosts, searchResult.hasPrev(), searchResult.hasNext(), searchResult.lastPage());
+                });
     }
 
     /**
@@ -58,35 +57,24 @@ public class PostController {
      * @param id идентификатор поста
      * @return пост
      */
+    @Async
     @GetMapping("posts/{id}")
     @ResponseBody
-    public PostResponse getPost(
+    public CompletableFuture<PostResponse> getPost(
             @PathVariable(name = "id") int id
     ) {
-        Post post;
-        try {
-            post = postRepository.getPost(id).get();
-        } catch (InterruptedException | ExecutionException e) {
-            throw new RuntimeException(e);
-        }
-
-        return convert(post);
+        return postRepository.getPost(id).thenApplyAsync(PostController::convert);
     }
 
     /**
      * Добавление поста
      */
+    @Async
     @PostMapping("posts")
     @ResponseBody
-    public PostResponse addPost(@RequestBody AddPostRequest request) {
-        Post post;
-        try {
-            post = postRepository.addPost(request.title(), request.text(), request.tags()).get();
-        } catch (InterruptedException | ExecutionException e) {
-            throw new RuntimeException(e);
-        }
-
-        return convert(post);
+    public CompletableFuture<PostResponse> addPost(@RequestBody AddPostRequest request) {
+        return postRepository.addPost(request.title(), request.text(), request.tags())
+                .thenApplyAsync(PostController::convert);
     }
 
     /**
@@ -94,38 +82,42 @@ public class PostController {
      * @param id идентификатор поста
      * @return пост
      */
+    @Async
     @PutMapping("posts/{id}")
     @ResponseBody
-    public PostResponse editPost(
+    public CompletableFuture<PostResponse> editPost(
             @PathVariable(name = "id") int id,
             @RequestBody EditPostRequest request
     ) {
         if (request.id() != id) {
             throw new RuntimeException("ids from path and body are not equal");
         }
-        Post post;
-        try {
-            post = postRepository.editPost(request.id(), request.title(), request.text(), request.tags()).get();
-        } catch (InterruptedException | ExecutionException e) {
-            throw new RuntimeException(e);
-        }
 
-        return convert(post);
+        return postRepository.editPost(request.id(), request.title(), request.text(), request.tags())
+                .thenApplyAsync(PostController::convert);
     }
 
     /**
      * Удаление поста
      * @param id идентификатор поста
      */
+    @Async
     @DeleteMapping("posts/{id}")
     @ResponseBody
-    public void deletePost(
+    public CompletableFuture<Void> deletePost(
             @PathVariable(name = "id") int id) {
-        try {
-            postRepository.deletePost(id).get();
-        } catch (InterruptedException | ExecutionException e) {
-            throw new RuntimeException(e);
-        }
+        return postRepository.deletePost(id);
+    }
+
+    /**
+     * Добавление лайка к посту
+     */
+    @Async
+    @PostMapping("posts/{id}/likes")
+    @ResponseBody
+    public CompletableFuture<Integer> likeIncrease(
+            @PathVariable(name = "id") int id) {
+        return postRepository.likeIncrease(id);
     }
 
     private static PostResponse convert(Post post) {
@@ -141,16 +133,5 @@ public class PostController {
                 post.getLikesCount(),
                 post.getCommentsCount()
         );
-    }
-
-    @PostMapping("posts/{id}/likes")
-    @ResponseBody
-    public int likeIncrease(
-            @PathVariable(name = "id") int id) {
-        try {
-            return postRepository.likeIncrease(id).get();
-        } catch (InterruptedException | ExecutionException e) {
-            throw new RuntimeException(e);
-        }
     }
 }

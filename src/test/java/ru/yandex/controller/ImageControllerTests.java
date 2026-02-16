@@ -37,7 +37,10 @@ public class ImageControllerTests {
     void testUploadImage_emptyFile_badRequest() throws Exception {
         MockMultipartFile empty = new MockMultipartFile("image", "empty.png", "image/png", new byte[0]);
 
-        mockMvc.perform(multipart(HttpMethod.PUT, "/api/posts/{id}/image", 1L).file(empty))
+        var result = mockMvc.perform(multipart(HttpMethod.PUT, "/api/posts/{id}/image", 1L).file(empty))
+                .andReturn();
+
+        mockMvc.perform(asyncDispatch(result))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().string("empty file"));
     }
@@ -46,7 +49,10 @@ public class ImageControllerTests {
     void testUploadImage_emptyFileName_badRequest() throws Exception {
         MockMultipartFile empty = new MockMultipartFile("image", "", "image/png", new byte[]{1, 2, 3});
 
-        mockMvc.perform(multipart(HttpMethod.PUT, "/api/posts/{id}/image", 1L).file(empty))
+        var result = mockMvc.perform(multipart(HttpMethod.PUT, "/api/posts/{id}/image", 1L).file(empty))
+                .andReturn();
+
+        mockMvc.perform(asyncDispatch(result))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().string("empty file name"));
     }
@@ -55,14 +61,20 @@ public class ImageControllerTests {
     void testUploadImage_emptyFileNameExtension_badRequest() throws Exception {
         MockMultipartFile empty = new MockMultipartFile("image", "empty", "image/png", new byte[]{1, 2, 3});
 
-        mockMvc.perform(multipart(HttpMethod.PUT, "/api/posts/{id}/image", 1L).file(empty))
+        var result = mockMvc.perform(multipart(HttpMethod.PUT, "/api/posts/{id}/image", 1L).file(empty))
+                .andReturn();
+
+        mockMvc.perform(asyncDispatch(result))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().string("file name has not extension"));
     }
 
     @Test
     void testGetImage_imageNotFound_400() throws Exception {
-        mockMvc.perform(get("/api/posts/0/image"))
+        var result = mockMvc.perform(get("/api/posts/0/image"))
+                .andReturn();
+
+        mockMvc.perform(asyncDispatch(result))
                 .andExpect(status().isBadRequest());
     }
 
@@ -72,11 +84,18 @@ public class ImageControllerTests {
         var fileName = "post_image.png";
         MockMultipartFile file = new MockMultipartFile("image", fileName, "image/png", pngStub);
 
-        mockMvc.perform(multipart(HttpMethod.PUT,"/api/posts/{id}/image", 1L).file(file))
+        var putResult = mockMvc.perform(multipart(HttpMethod.PUT,"/api/posts/{id}/image", 1L).file(file))
+                .andReturn();
+
+        mockMvc.perform(asyncDispatch(putResult))
                 .andExpect(status().isOk())
                 .andExpect(content().string("ok"));
 
-        mockMvc.perform(get("/api/posts/{id}/image", 1L))
+        var getResult = mockMvc.perform(get("/api/posts/{id}/image", 1L))
+                .andExpect(request().asyncStarted())
+                .andReturn();
+
+        mockMvc.perform(asyncDispatch(getResult))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_OCTET_STREAM))
                 .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\""))

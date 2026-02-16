@@ -54,8 +54,9 @@ public class PostControllerTests {
 
         // act
         var result = mockMvc.perform(get("/api/posts?search=%23Tag-for-1-3&pageNumber=1&pageSize=12"))
-                .andExpect(status().isOk())
                 .andReturn();
+        mockMvc.perform(asyncDispatch(result))
+                .andExpect(status().isOk());
 
         // assert
         var response = result.getResponse();
@@ -76,8 +77,9 @@ public class PostControllerTests {
 
         // act
         var result = mockMvc.perform(get("/api/posts?search=seco&pageNumber=1&pageSize=12"))
-                .andExpect(status().isOk())
                 .andReturn();
+        mockMvc.perform(asyncDispatch(result))
+                .andExpect(status().isOk());
 
         // assert
         var response = result.getResponse();
@@ -97,8 +99,9 @@ public class PostControllerTests {
 
         // act
         var result = mockMvc.perform(get("/api/posts?search=T&pageNumber=2&pageSize=2"))
-                .andExpect(status().isOk())
                 .andReturn();
+        mockMvc.perform(asyncDispatch(result))
+                .andExpect(status().isOk());
 
         // assert
         var response = result.getResponse();
@@ -119,8 +122,9 @@ public class PostControllerTests {
 
         // act
         var result = mockMvc.perform(get("/api/posts/3"))
-                .andExpect(status().isOk())
                 .andReturn();
+        mockMvc.perform(asyncDispatch(result))
+                .andExpect(status().isOk());
 
         // assert
         var response = result.getResponse();
@@ -144,8 +148,9 @@ public class PostControllerTests {
 
         // act
         var result = mockMvc.perform(get("/api/posts/0"))
-                .andExpect(status().isOk())
                 .andReturn();
+        mockMvc.perform(asyncDispatch(result))
+                .andExpect(status().isOk());
 
         // assert
         var response = result.getResponse();
@@ -203,8 +208,9 @@ public class PostControllerTests {
                         put("/api/posts/" + postResponse.id())
                                 .contentType(MediaType.APPLICATION_JSON) // Set the content type
                                 .content(requestJson))
-                .andExpect(status().isOk())
                 .andReturn();
+        mockMvc.perform(asyncDispatch(result))
+                .andExpect(status().isOk());
 
         // assert
         assertTrue(postResponse.id() > 4);
@@ -257,8 +263,9 @@ public class PostControllerTests {
                         delete("/api/posts/" + postResponse.id())
                                 .contentType(MediaType.APPLICATION_JSON) // Set the content type
                                 .content(requestJson))
-                .andExpect(status().isOk())
                 .andReturn();
+        mockMvc.perform(asyncDispatch(result))
+                .andExpect(status().isOk());
 
         // assert
         assertTrue(postResponse.id() > 4);
@@ -289,8 +296,9 @@ public class PostControllerTests {
                 .perform(post("/api/posts/" + existsPost.getId() + "/likes")
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(""))
-                .andExpect(status().isOk())
                 .andReturn();
+        mockMvc.perform(asyncDispatch(result))
+                .andExpect(status().isOk());
 
         // assert
         var response = result.getResponse();
@@ -314,8 +322,9 @@ public class PostControllerTests {
                         post("/api/posts")
                                 .contentType(MediaType.APPLICATION_JSON) // Set the content type
                                 .content(requestJson))
-                .andExpect(status().isOk())
                 .andReturn();
+        mockMvc.perform(asyncDispatch(result))
+                .andExpect(status().isOk());
 
         // assert
         var response = result.getResponse();

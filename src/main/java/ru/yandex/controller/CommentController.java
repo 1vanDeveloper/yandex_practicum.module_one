@@ -1,6 +1,7 @@
 package ru.yandex.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.web.bind.annotation.*;
 import ru.yandex.controller.dto.AddCommentRequest;
 import ru.yandex.controller.dto.CommentResponse;
@@ -9,7 +10,7 @@ import ru.yandex.controller.dto.UpdateCommentRequest;
 import ru.yandex.model.Comment;
 import ru.yandex.repository.CommentRepository;
 
-import java.util.concurrent.ExecutionException;
+import java.util.concurrent.CompletableFuture;
 
 @RestController
 @RequestMapping("/api/posts/{postId}/comments")
@@ -26,14 +27,15 @@ public class CommentController {
      * @param postId идентификатор поста
      * @return все комметрии поста
      */
+    @Async
     @GetMapping()
     @ResponseBody
-    public CommentsResponse getComments(@PathVariable(name = "postId") int postId)
-            throws ExecutionException, InterruptedException {
-        var comments = commentRepository.getComments(postId).get();
-        var response = new CommentsResponse();
-        response.addAll(comments.stream().map(CommentController::convert).toList());
-        return response;
+    public CompletableFuture<CommentsResponse> getComments(@PathVariable(name = "postId") int postId) {
+        return commentRepository.getComments(postId).thenApplyAsync(comments -> {
+            var response = new CommentsResponse();
+            response.addAll(comments.stream().map(CommentController::convert).toList());
+            return response;
+        });
     }
 
     /**
@@ -42,14 +44,14 @@ public class CommentController {
      * @param commentId идентификатор комментария
      * @return комментарий к посту
      */
+    @Async
     @GetMapping("/{commentId}")
     @ResponseBody
-    public CommentResponse getComment(
+    public CompletableFuture<CommentResponse> getComment(
             @PathVariable(name = "postId") int postId,
-            @PathVariable(name = "commentId") int commentId)
-            throws ExecutionException, InterruptedException {
-        var comment = commentRepository.getComment(commentId).get();
-        return convert(comment);
+            @PathVariable(name = "commentId") int commentId) {
+        return commentRepository.getComment(commentId)
+                .thenApplyAsync(CommentController::convert);
     }
 
     /**
@@ -57,14 +59,14 @@ public class CommentController {
      * @param postId идентификатор поста
      * @return новый комментарий к посту
      */
-    @PostMapping()
+    @Async
+    @PostMapping
     @ResponseBody
-    public CommentResponse addComment(
+    public CompletableFuture<CommentResponse> addComment(
             @PathVariable(name = "postId") int postId,
-            @RequestBody AddCommentRequest request)
-            throws ExecutionException, InterruptedException {
-        var comment = commentRepository.addComment(request.postId(), request.text()).get();
-        return convert(comment);
+            @RequestBody AddCommentRequest request) {
+        return commentRepository.addComment(request.postId(), request.text())
+                .thenApplyAsync(CommentController::convert);
     }
 
     /**
@@ -73,15 +75,15 @@ public class CommentController {
      * @param commentId идентификатор комментария
      * @return комментарий к посту
      */
+    @Async
     @PutMapping("/{commentId}")
     @ResponseBody
-    public CommentResponse updateComment(
+    public CompletableFuture<CommentResponse> updateComment(
             @PathVariable(name = "postId") int postId,
             @PathVariable(name = "commentId") long commentId,
-            @RequestBody UpdateCommentRequest request)
-            throws ExecutionException, InterruptedException {
-        var comment = commentRepository.updateComment(request.id(), request.text(), request.postId()).get();
-        return convert(comment);
+            @RequestBody UpdateCommentRequest request) {
+        return commentRepository.updateComment(request.id(), request.text(), request.postId())
+                .thenApplyAsync(CommentController::convert);
     }
 
     /**
@@ -89,13 +91,13 @@ public class CommentController {
      * @param postId идентификатор поста
      * @param commentId идентификатор комментария
      */
+    @Async
     @DeleteMapping("/{commentId}")
     @ResponseBody
-    public void updateComment(
+    public CompletableFuture<Void> updateComment(
             @PathVariable(name = "postId") int postId,
-            @PathVariable(name = "commentId") long commentId)
-            throws ExecutionException, InterruptedException {
-        commentRepository.deleteComment(commentId).get();
+            @PathVariable(name = "commentId") long commentId) {
+        return commentRepository.deleteComment(commentId);
     }
 
     private static CommentResponse convert(Comment comment) {
