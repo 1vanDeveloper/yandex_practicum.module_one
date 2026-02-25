@@ -1,0 +1,20 @@
+version: "3.8"
+
+services:
+  postgres:
+    container_name: blog-postgres
+    image: postgres:14
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DBNAME: blog
+      PGDATA: /data/postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./scripts/schema.sql:/docker-entrypoint-initdb.d/1-init.sql:ro
+      - ./scripts/data.sql:/docker-entrypoint-initdb.d/2-data.sql:ro
+
+volumes:
+  cache:
+    driver: local
