@@ -1,6 +1,7 @@
 package ru.yandex.service;
 
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.stereotype.Service;
 import ru.yandex.model.Post;
 import ru.yandex.repository.PostRepository;
 import ru.yandex.repository.dto.SearchResult;
@@ -50,6 +51,7 @@ public interface PostService {
     );
 }
 
+@Service
 class ImplementedPostService implements PostService {
 
     private final PostRepository postRepository;

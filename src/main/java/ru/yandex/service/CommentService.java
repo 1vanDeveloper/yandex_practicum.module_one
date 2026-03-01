@@ -1,6 +1,7 @@
 package ru.yandex.service;
 
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.stereotype.Service;
 import ru.yandex.model.Comment;
 import ru.yandex.repository.CommentRepository;
 
@@ -27,6 +28,7 @@ public interface CommentService {
     CompletableFuture<Void> deleteComment(long commentId);
 }
 
+@Service
 class ImplementedCommentService implements CommentService {
 
     private final CommentRepository commentRepository;

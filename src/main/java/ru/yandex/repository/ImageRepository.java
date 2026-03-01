@@ -6,6 +6,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.stereotype.Repository;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -23,6 +24,7 @@ public interface ImageRepository {
     CompletableFuture<Pair<Resource, String>> getImage(int postId);
 }
 
+@Repository
 class JdbcNativeImageRepository implements ImageRepository {
     private final NamedParameterJdbcTemplate jdbcTemplate;
     private final TransactionTemplate transactionTemplate;
@@ -58,7 +60,7 @@ do update set
                 .addValue("file_name", image.getOriginalFilename())
                 .addValue("content", image.getBytes());
 
-            return transactionTemplate.execute(status -> jdbcTemplate.update(baseSql, parameters));
+            return transactionTemplate.execute(_ -> jdbcTemplate.update(baseSql, parameters));
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -73,7 +75,7 @@ select file_name, content from images where post_id = :post_id
             parameters = new MapSqlParameterSource()
                 .addValue("post_id", postId);
 
-            return transactionTemplate.execute(status ->
+            return transactionTemplate.execute(_ ->
                     jdbcTemplate.query(baseSql, parameters, rs -> {
                         if (rs.next()) {
                             return Pair.of(

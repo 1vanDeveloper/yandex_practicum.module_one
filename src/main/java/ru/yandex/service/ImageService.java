@@ -3,6 +3,7 @@ package ru.yandex.service;
 import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.core.io.Resource;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import ru.yandex.repository.ImageRepository;
 
@@ -19,6 +20,7 @@ public interface ImageService {
     CompletableFuture<Pair<Resource, String>> getImage(int postId);
 }
 
+@Service
 class ImplementedImageService implements ImageService {
 
     private final ImageRepository imageRepository;

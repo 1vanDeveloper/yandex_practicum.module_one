@@ -4,6 +4,7 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.stereotype.Repository;
 import ru.yandex.model.Comment;
 
 import java.sql.ResultSet;
@@ -31,6 +32,7 @@ public interface CommentRepository {
     CompletableFuture<Void> deleteComment(long commentId);
 }
 
+@Repository
 class JdbcNativeCommentRepository implements CommentRepository {
 
     private final NamedParameterJdbcTemplate jdbcTemplate;
@@ -71,7 +73,7 @@ select id, text, post_id from comments where post_id = :post_id
         var parameters = new MapSqlParameterSource()
                 .addValue("post_id", postId);
 
-        return jdbcTemplate.query(baseSql, parameters, (rs, row) -> map(rs));
+        return jdbcTemplate.query(baseSql, parameters, (rs, _) -> map(rs));
     }
 
     private Comment innerGetComment(long commentId) {
