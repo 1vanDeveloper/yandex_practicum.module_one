@@ -7,6 +7,7 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.stereotype.Repository;
 import ru.yandex.model.Post;
 import ru.yandex.repository.dto.SearchResult;
 
@@ -59,6 +60,7 @@ public interface PostRepository {
     );
 }
 
+@Repository
 class JdbcNativePostRepository implements PostRepository {
 
     private final NamedParameterJdbcTemplate jdbcTemplate;
@@ -195,7 +197,7 @@ limit :limit
         return jdbcTemplate.query(
                 baseSql,
                 parameters,
-                (rs, rowNum) -> Pair.of(map(rs), rs.getInt("total_count")));
+                (rs, _) -> Pair.of(map(rs), rs.getInt("total_count")));
     }
 
     private Void innerDeletePost(int id) {
